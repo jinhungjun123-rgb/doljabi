@@ -13,3 +13,7 @@ data/tables/*.sqlite
 .conda
 activate
 .claude/settings.local.json
+# 앱 개발 산출물 (시안, API 원본, 배포 묶음)
+.superpowers/
+data/programs/raw/
+build/
