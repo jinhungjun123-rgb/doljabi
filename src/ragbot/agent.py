@@ -6,6 +6,7 @@ When an answer is wrong, read its trace first: it shows whether retrieval, routi
 import json
 import re
 import uuid
+from collections.abc import Callable
 from datetime import datetime
 
 from ragbot import domain, llm, router
@@ -50,7 +51,7 @@ class Chatbot:
         self.ctx = Context(self.index, self.cfg)
         self.write_traces = write_traces
 
-    def system_prompt(self, plan: dict | None = None, question: str = "") -> str:
+    def system_prompt(self, plan: dict | None = None, question: str = "", context: str | None = None) -> str:
         c = self.cfg["chatbot"]
         prompt = c["system_prompt"].format(name=c["name"], today=c["today"])
         if question:   # short questions often got answers in the wrong language without this
@@ -59,6 +60,8 @@ class Chatbot:
             fb = ", ".join(plan["fallback"]) or "none"
             prompt += (f"\nRouting plan for this question: primary source = {plan['primary']}; "
                        f"fallback = {fb}. Reason: {plan['reason']}")
+        if context:   # e.g. the user's situation entered in an app; never stored by the agent
+            prompt += "\n" + context
         return prompt
 
     def plan(self, question: str, history: list[dict] | None = None) -> dict | None:
@@ -80,11 +83,17 @@ class Chatbot:
         """The config source a tool belongs to (None = a utility such as calculator)."""
         return next((s for s, card in self.cfg["sources"].items() if tool_name in card["tools"]), None)
 
-    def answer(self, question: str, history: list[dict] | None = None) -> Answer:
-        """history: earlier turns [{"role": "user"|"assistant", "content": str}]"""
+    def answer(self, question: str, history: list[dict] | None = None, context: str | None = None,
+               on_progress: Callable[[str, dict], None] | None = None) -> Answer:
+        """history: earlier turns [{"role": "user"|"assistant", "content": str}]
+        context: extra text appended to the system prompt (e.g. the user's situation)
+        on_progress(step, data): "route" {"primary"} after planning, "tool" {"name"} before each tool call,
+                                 "write" {} before returning the final answer"""
+        progress = on_progress or (lambda step, data: None)
         plan = self.plan(question, history)
+        progress("route", {"primary": plan["primary"] if plan else None})
         tools = self.tools_for(plan)
-        messages = [{"role": "system", "content": self.system_prompt(plan, question)}, *(history or []),
+        messages = [{"role": "system", "content": self.system_prompt(plan, question, context)}, *(history or []),
                     {"role": "user", "content": question}]
         ans = Answer(answer="", trace_id=datetime.now().strftime("%H%M%S-") + uuid.uuid4().hex[:6], plan=plan)
         # Guardrail 1 stays on even when the router says "none": the router sometimes labels real questions
@@ -113,6 +122,7 @@ class Chatbot:
                                      untried=", ".join(untried), hint=self._hint())}]
                     continue
             if not out["tool_calls"]:
+                progress("write", {})
                 ans.answer = out["content"]
                 break
             messages.append({"role": "assistant", "content": out["content"],
@@ -120,6 +130,7 @@ class Chatbot:
                                              "function": {"name": tc["name"], "arguments": tc["arguments"]}}
                                             for tc in out["tool_calls"]]})
             for tc in out["tool_calls"]:
+                progress("tool", {"name": tc["name"]})
                 args, result = self._call_tool(tc)
                 ans.tool_calls.append({"name": tc["name"], "arguments": args, "result": result})
                 self._collect_sources(self.source_of(tc["name"]), result, ans)

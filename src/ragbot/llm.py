@@ -5,6 +5,7 @@ Works with any OpenAI-compatible server; endpoints and model names come from .en
 CACHE_MODE (env)
 - live    (default): call the API and store results in .cache/. If a call fails, fall back to the cache.
 - offline          : never call the API; cache only.
+- nostore          : call the API and keep nothing on disk (apps that receive personal information).
 """
 import hashlib
 import json
@@ -38,6 +39,8 @@ def describe() -> str:
 
 def cached(kind: str, payload, fn):
     """Return fn() and store it under a key derived from payload. Also used by the web search layer."""
+    if CACHE_MODE == "nostore":
+        return fn()
     CACHE_DIR.mkdir(exist_ok=True)
     key = hashlib.sha1(json.dumps([kind, payload], ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:16]
     path = CACHE_DIR / f"{kind}_{key}.json"
