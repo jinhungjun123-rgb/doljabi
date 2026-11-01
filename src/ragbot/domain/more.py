@@ -11,7 +11,7 @@ from ragbot.config import DATA_DIR
 from ragbot.domain.eligibility import card_status, clean_profile
 
 MORE_FILE = DATA_DIR / "programs" / "more.json"
-GROUP_LABELS = {"life": "생활·금융", "health": "건강·마음", "housing": "주거", "education": "교육", "jobs": "일자리",
+GROUP_LABELS = {"life": "생활·금융", "health": "건강·마음", "education": "교육", "jobs": "일자리", "housing": "주거",
                 "participation": "참여·문화"}
 # 온통청년 지역 코드 앞 두 자리. 광주·전남은 전남광주통합특별시(12) 하나로 나온다 (원본 2026-11-01)
 SIDO_CODE = {"서울": "11", "부산": "26", "대구": "27", "인천": "28", "광주": "12", "대전": "30", "울산": "31", "세종": "36",
@@ -132,7 +132,7 @@ def _period_row(item: dict, today: str) -> dict | None | bool:
 def _code_row(key: str, codes: list, names: dict, user: set | None) -> dict | None:
     if not codes:
         return None
-    label = ("취업 상태: " if key == "job" else "학업: ") + "·".join(names.get(c, "그 밖의 조건") for c in dict.fromkeys(codes))
+    label = ("취업 상태: " if key == "job" else "학업: ") + "·".join(dict.fromkeys(names.get(c, "그 밖의 조건") for c in codes))
     if user is None:
         return _row(key, label, "unknown")
     if user & set(codes):
@@ -153,7 +153,7 @@ def _restriction_rows(item: dict, profile: dict) -> list[dict]:
     out = []
     special = item.get("special") or []
     if special:
-        names = "·".join(SPECIAL_NAME.get(c, "그 밖의 특정 대상") for c in dict.fromkeys(special))
+        names = "·".join(dict.fromkeys(SPECIAL_NAME.get(c, "그 밖의 특정 대상") for c in special))
         ok = "0014003" in special and profile.get("basic_livelihood") == "yes"
         out.append(_row("special", f"특정 대상: {names}", "ok" if ok else "unknown"))
     elif TARGET_WORDS.search(item["name"]):
@@ -202,21 +202,14 @@ def more_for(profile: dict, data: dict, today: str) -> dict:
     return {"as_of": data["as_of"], "groups": groups}
 
 
-def about_summary(about) -> str | None:
-    """채팅 맥락: 사용자가 일반 지원 목록에서 고른 사업. 화면이 보낸 값이므로 글자 수를 자르고 http(s) 링크만 둔다."""
-    if not isinstance(about, dict):
+def about_summary(about, data: dict) -> str | None:
+    """채팅 맥락: 사용자가 일반 지원 목록에서 고른 사업. 화면은 사업 번호만 보내고, 내용은 서버의 정리 파일에서 찾는다."""
+    if not isinstance(about, dict) or not isinstance(about.get("id"), str):
         return None
-
-    def text(key: str, limit: int) -> str:
-        value = about.get(key)
-        return re.sub(r"\s+", " ", value).strip()[:limit] if isinstance(value, str) else ""
-
-    name, org, summary, link = text("name", 80), text("org", 80), text("summary", 200), text("link", 300)
-    if not name:
+    item = next((i for i in data["items"] if i["id"] == about["id"]), None)
+    if item is None:
         return None
-    facts = [f"사업 이름: {name}"] + [f"{k}: {v}" for k, v in (("담당", org), ("설명", summary)) if v]
-    if re.match(r"https?://", link):
-        facts.append(f"원문: {link}")
+    facts = [f"사업 이름: {item['name']}", f"담당: {item['org']}", f"설명: {item['summary']}", f"원문: {item['link']}"]
     return ("About this question (사용자가 앱의 '일반 지원' 목록에서 고른 사업): " + "; ".join(facts) + ". "
             "이 사업은 공공데이터(온통청년·복지로)에서 온 것이라 법령 문서에는 없습니다. web_search 로 공식 사이트를 찾아 답하고, "
             "웹 정보는 확인이 필요하다고 표시하세요. 받을 수 있는지 최종 판정은 하지 마세요.")

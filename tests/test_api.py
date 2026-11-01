@@ -111,13 +111,17 @@ def test_more_endpoint():
 
 
 def test_chat_about_is_cleaned():
+    # 화면이 보낸 이름·링크는 쓰지 않고, 사업 번호로 서버의 정리 파일에서 찾는다
+    from ragbot.domain.more import load_more
+    item = load_more()["items"][0]
     c = TestClient(create_app(bot_factory=FakeBot))
-    about = {"name": "가" * 500, "org": "기관", "summary": "설명", "link": "javascript:alert(1)"}
+    about = {"id": item["id"], "name": "가" * 500, "link": "javascript:alert(1)"}
     c.post("/api/chat", json={"question": "q", "about": about})
-    assert "가" * 80 in FakeBot.last_context and "가" * 81 not in FakeBot.last_context
+    assert item["name"] in FakeBot.last_context and "가가가" not in FakeBot.last_context
     assert "javascript" not in FakeBot.last_context
-    c.post("/api/chat", json={"question": "q", "about": "x"})
-    assert FakeBot.last_context is None
+    for bad in ("x", {"name": "아무 사업"}, {"id": "Y:없음"}):
+        c.post("/api/chat", json={"question": "q", "about": bad})
+        assert FakeBot.last_context is None
 
 
 def test_more_is_compressed():

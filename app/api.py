@@ -134,7 +134,7 @@ def create_app(bot_factory=None) -> Starlette:
         history = body.get("history") if isinstance(body.get("history"), list) else []
         history = [m for m in history if isinstance(m, dict) and m.get("role") in ("user", "assistant")][-6:]
         profile = clean_profile(body.get("profile"))
-        parts = (profile_summary(profile) if profile else None, about_summary(body.get("about")))
+        parts = (profile_summary(profile) if profile else None, about_summary(body.get("about"), more_data))
         context = "\n".join(x for x in parts if x) or None
         events: queue.Queue = queue.Queue()
 

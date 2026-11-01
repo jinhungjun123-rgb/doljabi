@@ -3,6 +3,7 @@
 출처: 온통청년 청년정책(raw/<날짜>/youth.json), 복지로 국가 서비스(raw/<날짜>/national.json). 자동 판정할 수 있는 것만 남긴다
 (설계: docs/superpowers/specs/2026-11-01-doljabi-more-support-design.md). 검수한 지원사업(program_candidates.json)과 같은 사업은 뺀다.
 """
+import html
 import json
 import re
 import sys
@@ -21,11 +22,15 @@ NOTHING = re.compile(r"^(해당\s*없음|없음|-|무|x)$", re.I)
 NATION_MIN_SIDOS = 15                               # 시·도 15곳 이상이면 전국
 NATIONAL_THEMES = {"생활지원", "서민금융", "신체건강", "정신건강", "교육", "일자리", "주거", "보호·돌봄", "안전·위기", "법률", "문화·여가"}
 ONLY_FOR_OTHERS = {"보훈대상자", "다문화·탈북민"}
+# 사용자가 신청할 수 없는 행정 업무 (위원회 운영, 조사, 개발사업). "위원 모집"처럼 참여할 수 있는 것은 남긴다
+NOT_SUPPORT = re.compile(r"실태조사|조성사업|개발사업|정비사업|기본계획|시행계획|연구용역|조정위원회|위원회 (구성|운영|설치)|위원회 운영$|청년참여 확대|참여비율|위촉 지정관리|교통서비스 개선|조성$")
+# 원본의 주거 분류 중 주거와 관계없는 것은 생활·금융으로
+HOUSING_WORDS = re.compile(r"주거|주택|월세|전세|임대|기숙|거주|보금자리|원룸|셰어|하우스|숙소|이사|청약|보증금|입주|빌리지|공공분양|모기지|학사관|전입")
 THEME_GROUP = [("정신건강", "health"), ("신체건강", "health"), ("주거", "housing"), ("일자리", "jobs"), ("교육", "education")]
 
 
 def one_line(text: str, limit: int = 90) -> str:
-    text = re.sub(r"\s+", " ", (text or "").replace("&middot;", "·")).strip(" -ㅇ○❍")
+    text = re.sub(r"\s+", " ", html.unescape(text or "")).strip(" -ㅇ○❍")
     return text if len(text) <= limit else text[:limit - 1].rstrip() + "…"
 
 
@@ -85,7 +90,9 @@ def youth_items(policies: list[dict], reviewed: set[str]) -> list[dict]:
         age = None
         if p.get("sprtTrgtAgeLmtYn") == "Y" and (lo is not None or hi is not None):
             lo = lo or 0
-            age = [lo, 99 if hi is None or (hi == 0 and lo > 0) else hi]   # 0~0세는 그대로 (영유아 대상)
+            age = [lo, 99 if hi is None or (hi == 0 and lo > 0) else hi]   # 0~0세는 그대로 (범위가 글로만 적힘)
+            if age == [0, 99]:
+                age = None                                                # 사실상 나이 제한 없음
         income = None
         if p.get("earnCndSeCd") == "0043002":
             top = number(p.get("earnMaxAmt"))
@@ -129,7 +136,15 @@ def main() -> None:
     reviewed = {f"N:{c['bokjiro']}" for c in candidates if c.get("bokjiro")} | {f"Y:{c['youth']}" for c in candidates if c.get("youth")}
     youth = json.loads((RAW / "youth.json").read_text(encoding="utf-8"))
     national = json.loads((RAW / "national.json").read_text(encoding="utf-8"))
-    items = youth_items(youth, reviewed) + national_items(national, reviewed)
+    items, seen = [], set()
+    for i in youth_items(youth, reviewed) + national_items(national, reviewed):
+        key = (re.sub(r"\s+", "", i["name"]), i["org"])
+        if key in seen or NOT_SUPPORT.search(i["name"]):
+            continue                                  # 같은 사업이 여러 번 올라온 것, 신청할 수 없는 행정 업무
+        seen.add(key)
+        if i["group"] == "housing" and not HOUSING_WORDS.search(i["name"] + i["summary"]):
+            i["group"] = "life"
+        items.append(i)
     lines = ",\n".join(json.dumps(i, ensure_ascii=False, separators=(",", ":")) for i in items)
     OUT.write_text(f'{{"as_of": "{AS_OF}", "items": [\n{lines}\n]}}\n', encoding="utf-8")
     print(f"more.json: youth {sum(i['source'] == 'youth' for i in items)}, national {sum(i['source'] == 'national' for i in items)}")

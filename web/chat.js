@@ -64,7 +64,7 @@
     if (!question || chat.pending) return;
     const prog = ctxItem(), item = ctxMore();
     const asked = freshFromCard() && !question.includes(prog.name) ? c().about(prog.name) + question : question;
-    const about = item ? { about: { name: item.name, org: item.org, summary: item.summary, link: item.link } } : {};
+    const about = item ? { about: { id: item.id } } : {};   // 내용은 서버가 정리 파일에서 찾는다
     const history = chat.messages.filter((m) => !m.error).slice(-6).map((m) => ({ role: m.role, content: m.content }));
     chat.messages.push({ role: "user", content: question });
     chat.lastQuestion = question;

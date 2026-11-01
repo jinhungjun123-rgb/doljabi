@@ -36,3 +36,15 @@ def test_youth_restriction_fields_and_zero_age():
     assert all({"special", "married", "extra"} <= i.keys() for i in youth)
     infants = next(i for i in youth if i["name"].startswith("가정양육수당"))
     assert infants["age"] == [0, 0]                  # 나이 제한 Y, 0~0세: 제한 없음이 아니다
+
+
+def test_data_quality():
+    import re
+    d = json.loads(MORE.read_text(encoding="utf-8"))["items"]
+    assert not [i["name"] for i in d if re.search(r"&[a-z]+;|&#\d+;", i["name"] + i["summary"])]      # HTML 기호가 글자로
+    keys = [(re.sub(r"\s+", "", i["name"]), i["org"]) for i in d]
+    assert len(keys) == len(set(keys))                                                                  # 같은 사업 한 번만
+    assert not [i["name"] for i in d if re.search(r"실태조사|조성사업|개발사업|정비사업|조정위원회 운영|위원회 운영$", i["name"])]
+    assert not [i for i in d if i.get("age") == [0, 99]]                                                    # "나이 0세 이상"은 나이 제한 없음
+    housing = re.compile(r"주거|주택|월세|전세|임대|기숙|거주|보금자리|원룸|셰어|하우스|숙소|이사|청약|보증금|입주|빌리지|공공분양|모기지|학사관|전입")
+    assert not [i["name"] for i in d if i["group"] == "housing" and not housing.search(i["name"] + i["summary"])]
