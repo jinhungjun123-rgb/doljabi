@@ -69,7 +69,7 @@
     let answered = false;
     try {
       const r = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ question: asked, history, profile, lang: D.state.lang }) });
+        body: JSON.stringify({ question: asked, history, profile }) });
       if (!r.ok || !r.body) throw new Error(`chat ${r.status}`);
       const reader = r.body.getReader();
       const dec = new TextDecoder();

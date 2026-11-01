@@ -1,6 +1,6 @@
 // 돌잡이 화면: 질문 5단계 → 결과 → 상세, 센터 찾기. 채팅은 chat.js가 Dol.screens.chat 으로 붙는다.
 (() => {
-  const PROFILE_KEY = "doljabi.profile.v1", LANG_KEY = "doljabi.lang";
+  const PROFILE_KEY = "doljabi.profile.v1";
   const REGIONS = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
   const LINKS = { youthOn: "https://www.mohw2030.co.kr", bokjiro: "https://www.bokjiro.go.kr", youthCenter: "https://www.youthcenter.go.kr" };
 
@@ -21,8 +21,8 @@
     return {};
   }
 
-  const state = { lang: store.get(LANG_KEY) === "en" ? "en" : "ko", profile: loadProfile(), screen: null, params: {}, data: null, match: null };
-  const t = () => window.I18N[state.lang];
+  const state = { profile: loadProfile(), screen: null, params: {}, data: null, match: null };
+  const t = () => window.I18N.ko;
   const app = document.getElementById("app");
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const linkify = (s) => esc(s).replace(/https?:\/\/[^\s;,)]+/g, (u) => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
@@ -137,7 +137,7 @@
     }
     state.match = await api("/api/match", { profile: state.profile });
     const p = state.profile, o = t().opt;
-    const tags = [[p.region, p.sigungu].filter(Boolean).join(" "), p.age != null ? `${p.age}${state.lang === "ko" ? "세" : ""}` : "",
+    const tags = [[p.region, p.sigungu].filter(Boolean).join(" "), p.age != null ? `${p.age}세` : "",
       ...(p.relations || []).map((v) => o.relations[v]).filter(Boolean)].filter(Boolean);
     const groups = { national: [], linked: [], local: [] };
     for (const c of state.match.cards) groups[c.group].push(c);
@@ -214,9 +214,7 @@
   const TAB_OF = { q: "results", results: "results", detail: "results", chat: "chat", centers: "centers" };
 
   function renderChrome() {
-    document.documentElement.lang = state.lang;
     document.getElementById("brandSub").textContent = t().appSub;
-    document.querySelectorAll(".lang button").forEach((b) => b.classList.toggle("on", b.dataset.lang === state.lang));
     const ico = { results: "🧭", chat: "💬", centers: "📍" };
     document.getElementById("tabs").innerHTML = ["results", "chat", "centers"].map((k) =>
       `<button type="button" data-tab="${k}" class="${TAB_OF[state.screen] === k ? "on" : ""}"><span class="ico">${ico[k]}</span>${esc(t().tabs[k])}</button>`).join("");
@@ -228,7 +226,7 @@
       await screens[state.screen]();
     } catch (e) {
       console.error(e);
-      app.innerHTML = `<p class="sub">⚠ ${state.lang === "ko" ? "화면을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요." : "Could not load. Please try again."}</p>
+      app.innerHTML = `<p class="sub">⚠ 화면을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.</p>
         <a class="btn" href="tel:129">📞 129</a>`;
     }
   }
@@ -289,12 +287,6 @@
     if (state.screen === "q") readStepInputs();
     if (b.dataset.tab === "results") return go(state.profile.done ? "results" : "q", { step: 1 });
     return go(b.dataset.tab);
-  });
-  document.querySelector(".lang").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-lang]");
-    if (!b) return;
-    if (state.screen === "q") readStepInputs();
-    state.lang = b.dataset.lang; store.set(LANG_KEY, state.lang); render();
   });
   document.getElementById("brand").addEventListener("click", () => go(state.profile.done ? "results" : "q", { step: 1 }));
 

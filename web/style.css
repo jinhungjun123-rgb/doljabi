@@ -16,9 +16,6 @@ a { color: var(--main-dark); }
 .top { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--head); }
 .brand { border: 0; background: none; padding: 0; font-weight: 800; font-size: 20px; color: var(--main-dark); cursor: pointer; display: flex; align-items: baseline; gap: 4px; }
 .brand small { font-size: 12px; font-weight: 600; color: var(--muted); margin-left: 4px; }
-.lang { display: flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: #fff; }
-.lang button { border: 0; background: none; padding: 4px 10px; font-size: 13px; color: var(--muted); cursor: pointer; }
-.lang button.on { background: var(--main); color: #fff; font-weight: 700; }
 
 main { padding: 16px; }
 h1 { font-size: 22px; margin: 4px 0 4px; letter-spacing: -0.3px; }

@@ -3,7 +3,7 @@
   GET  /               the screens in web/ (HTML, CSS, JS; no build step)
   GET  /api/programs   reviewed programs and centers (data/programs/programs.json)
   POST /api/match      {"profile"} → card status per program, from the domain rules (no LLM)
-  POST /api/chat       {"question", "history", "profile", "lang"} → server-sent events: progress…, answer | error
+  POST /api/chat       {"question", "history", "profile"} → server-sent events: progress…, answer | error
   GET  /api/health     {"ok", "index"}
 
 Personal information stays out of the server's disk: traces are off here; run with CACHE_MODE=nostore.
