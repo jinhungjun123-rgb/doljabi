@@ -1,3 +1,21 @@
+# 돌잡이 (돌봄길잡이)
+
+가족을 돌보는 13~34세 청년이 받을 수 있는 지원을 법령 근거로 찾아 주는 모바일 웹앱입니다.
+질문 5단계 → 받을 수 있어 보이는 지원 카드 → 채팅으로 이어 묻기. 설계: `docs/superpowers/specs/2026-11-01-doljabi-mobile-web-design.md`
+
+```bash
+PYTHONPATH=src python -m ragbot index                                   # 문서 인덱스 (처음 한 번, 임베딩 API)
+PYTHONPATH=src CACHE_MODE=nostore uvicorn app.api:app --port 8000       # 앱: http://localhost:8000
+python scripts/build_programs.py                                        # 검수 결과 → data/programs/programs.json
+bash scripts/deploy_hf.sh                                               # Hugging Face 배포 (.env 의 HF_TOKEN, HF_SPACE)
+```
+
+`PYTHONPATH=src`: 이 PC의 conda 환경 `my_ragbot`은 다른 폴더(원본 템플릿)에 설치되어 있어서, 붙이지 않으면 그쪽 코드가 실행됩니다.
+
+아래는 이 프로젝트가 출발한 수업 템플릿의 안내입니다.
+
+---
+
 # 나의 RAG 챗봇 — 학생 프로젝트 템플릿
 
 수업 예제(**CBNU 유학생 도우미**, `rag_chatbot_starter`)의 **코어는 그대로 두고, 도메인을 비워 둔** 템플릿입니다.

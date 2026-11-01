@@ -1,29 +1,34 @@
-# AGENTS.md — TODO 챗봇 이름
+# AGENTS.md — 돌잡이 (돌봄길잡이)
 
 이 저장소에서 일하는 코딩 에이전트(Claude Code, Codex, Cursor …)를 위한 지시문입니다.
-사람은 README.md 부터 읽으세요.
-
-> 학생에게: 이 파일은 템플릿입니다. 일반 규칙(명령어, 완료 기준, 경계, 아키텍처)은 이미 채워져 있습니다.
-> `TODO` 표시된 부분(목표, 데이터 사실, 디버깅 지도)은 뼈대가 돌아간 뒤 `tasks/07_agents_md.md` 에서 채웁니다.
-> 실제 명령어와 파일, 실제로 겪은 문제를 적어야 에이전트에게 쓸모가 있기 때문입니다.
+사람은 README.md 부터 읽으세요. 앱 설계: `docs/superpowers/specs/2026-11-01-doljabi-mobile-web-design.md`.
 
 ## 목표
 
-TODO(07): 한두 문단. 누구의 어떤 질문에, 어떤 소스로, 어떤 방식(출처, 사용자의 언어, 모르면 "찾을 수 없음")으로 답하는지.
-질문마다 **라우터가 먼저 답이 있을 소스를 정하고**, 에이전트가 그 소스를 검색하며, "찾을 수 없음" 전에 나머지 소스도 찾아봅니다.
+가족을 돌보는 13~34세 아동·청년이 받을 수 있는 국가·지역 지원을 법령 근거로 안내하는 모바일 웹앱 "돌잡이".
+질문 5단계에 답하면 **규칙 코드**(`src/ragbot/domain/eligibility.py`, LLM 없음)가 검수한 지원사업 14개(`data/programs/programs.json`)를
+"받을 수 있어 보여요 / 확인이 필요해요 / 어려워 보여요"로 판정하고, 채팅은 RAG 챗봇이 법령 문서로 답한다 (출처 칩, 사용자의 언어,
+모르면 "찾을 수 없음" + 129·청년미래센터). 최종 자격 판정은 하지 않는다.
+채팅에서는 질문마다 **라우터가 먼저 답이 있을 소스를 정하고**, 에이전트가 그 소스를 검색하며, "찾을 수 없음" 전에 나머지 소스도 찾아봅니다.
 
-1. **TODO 문서** (비정형): `data/docs/…`
-2. **TODO 표** (정형, 선택): `data/tables/…`
-3. **웹**: 공식 사이트 우선. 나머지 둘이 다루지 않는 모든 것.
+1. **문서** (비정형): `data/docs/` 의 위기아동청년법·시행령·시행규칙, 보건복지부 고시 3개, 보도자료 (모두 한국어)
+2. **지원사업·센터** (앱 화면 전용, 채팅 도구 아님): `data/programs/programs.json` ← 팀 검수 `data/programs/review/*_v3.*`
+3. **웹**: 공식 사이트 우선. 나머지가 다루지 않는 모든 것.
 
 각 소스가 다루는 것과 다루지 않는 것은 `config.yaml → sources` (소스 카드)에 있습니다.
 목표, 사용자, 성공 수치, 범위 밖은 `docs/GOAL.md` 에 있습니다. 동작을 바꾸기 전에 읽으세요.
 
 ## 명령어
 
-Python 3.11 환경에서 저장소 루트에서 실행합니다.
+Python 3.11 환경에서 저장소 루트에서 실행합니다. **이 PC에서는 `PYTHONPATH=src` 를 붙입니다**: conda 환경 `my_ragbot` 의
+`ragbot` 이 다른 폴더(`Downloads/rag_chatbot_template`)에 editable 설치되어 있어서, 붙이지 않으면 그쪽 코드와 config.yaml 이 실행됩니다
+(pytest 는 pyproject 의 `pythonpath` 덕분에 괜찮음).
 
 | 명령 | 하는 일 |
+|---|---|
+| `PYTHONPATH=src CACHE_MODE=nostore uvicorn app.api:app --port 8000` | 앱 서버 (화면 `web/`, API `/api/*`). 내 정보가 디스크에 남지 않게 nostore |
+| `python scripts/build_programs.py` | 검수 결과 → `data/programs/programs.json` (손으로 고치지 않음) |
+| `bash scripts/deploy_hf.sh` | Hugging Face Space 배포 (`DRY_RUN=1` 이면 묶음만 만듦) |
 |---|---|
 | `python -m ragbot build` | ingest + tables + index (데이터, `chunking`, `tables` 설정 변경 후) |
 | `python -m ragbot ingest` | kordoc 이 문서를 파싱 → `data/parsed/*.json` + `*.md` (파일 해시로 캐시) |
@@ -37,13 +42,11 @@ Python 3.11 환경에서 저장소 루트에서 실행합니다.
 
 ## 완료 기준
 
-작업은 다음이 **모두** 성립할 때만 완료입니다:
-1. `python -m ragbot check` 통과 (테스트와 평가 기준).
-2. `tasks/` 의 해당 작업 카드의 완료 조건을 충족하고 체크했다.
-3. 새 도구에는 단위 테스트와, 그 도구가 필요한 골든 질문이 하나 이상 있다.
+작업은 다음이 **모두** 성립할 때만 완료입니다 (팀 결정 2026-11-01: 템플릿의 골든 QA 20~30개·평가 기준 대신, `docs/decisions/0007`):
+1. `python -m ragbot check --fast` 통과. 판정 규칙을 바꿨다면 `tests/test_eligibility.py` 에 그 경우의 테스트가 있다.
+2. 화면을 바꿨다면 휴대폰 크기(390px)에서 질문 → 결과 → 상세 → 물어보기를 한 번 확인했다.
+3. 채팅 답을 바꾸는 수정(프롬프트, 검색 설정)은 `eval/golden_qa.jsonl` 의 점검 질문 10개로 전후 정답 수를 확인했다.
 4. 동작이나 데이터 계약을 바꿨다면 `docs/decisions/` 에 짧은 기록이 있다.
-
-변경 전후의 평가 수치를 보고하세요 (accuracy, route_accuracy, router_accuracy, by_route, by_lang).
 
 ## 경계
 
@@ -85,11 +88,11 @@ index → tools → router → agent → evaluate → cli/app`. 모듈은 자기
 
 ## 일하는 방법
 
-1. `tasks/` 에서 카드 **하나**를 고릅니다 (완료되지 않은 가장 낮은 번호). 작업을 섞지 않습니다.
-   01 과 03 은 사람의 작업입니다. 그 카드가 열려 있으면 코드를 바꾸지 말고 사람에게 알리세요.
+1. 앱 작업은 `docs/superpowers/plans/` 의 계획을, 그 밖에는 `tasks/` 카드 하나를 고릅니다. 작업을 섞지 않습니다.
+   정답(점검 질문의 reference_answer, 검수 데이터의 값)은 사람이 정합니다. 초안을 쓸 수는 있지만 사람 확인 전에는 쓰지 않습니다.
 2. 코드를 바꾸기 전에 문제를 증거로 재현합니다: `python -m ragbot ask` 나 `eval --route …` 를 실행하고 `runs/` 의 trace 를 엽니다.
 3. 원인을 고치는 가장 작은 변경을 합니다. 변경마다 `python -m ragbot check --fast`.
-4. 평가를 다시 돌리고 마지막 `runs/eval_*.json` 과 비교합니다. 다른 소스의 점수를 떨어뜨린 수정은 완료가 아닙니다.
+4. 채팅 답을 바꿨다면 점검 질문 10개를 다시 돌리고 마지막 `runs/eval_*.json` 과 비교합니다. 정답 수를 떨어뜨린 수정은 되돌립니다.
 
 ## 디버깅 지도: 증상 → 볼 곳
 
@@ -104,10 +107,17 @@ index → tools → router → agent → evaluate → cli/app`. 모듈은 자기
 | 표의 값이 틀림 | trace → 도메인 도구 결과 | `domain/queries.py` 필터, `domain/tables.py` 파싱; LLM 탓이 아님 |
 | 답의 언어가 틀리거나 출처가 없음 | trace 의 마지막 메시지 | `config.yaml` 시스템 프롬프트 |
 | 아무것도 못 찾았는데 자신 있게 답함 | trace: 빈 결과, 확신에 찬 답 | 시스템 프롬프트의 기권 규칙; `unanswerable` 평가 질문 추가 |
-| TODO(07): 내 프로젝트에서 실제로 겪은 증상 | | |
+| `python -m ragbot …` 가 "TODO 챗봇 이름" 설정이나 0 chunks 로 돈다 | `python -c "import ragbot; print(ragbot.__file__)"` | 다른 폴더의 템플릿이 import 됨 → `PYTHONPATH=src` |
+| 결과 카드 상태가 법령과 다름 | `src/ragbot/domain/eligibility.py` 의 `RULES`, `tests/test_eligibility.py` | 조건 함수의 ok/unknown/no 분기; LLM 탓이 아님 |
+| 화면에 "data/docs", "시트" 같은 내부 문구 | `scripts/build_programs.py` 의 `USER_WORDING` | 검수 파일의 표현이 그대로 넘어옴 (`test_no_review_file_wording_reaches_users`) |
+| 채팅이 조문을 인용하고도 결론이 틀림 (예: 병역 가산) | trace 의 마지막 메시지와 `search_documents` 결과 | 검색은 맞음 → 답 생성; 시스템 프롬프트의 단서·예외 규칙 (`docs/decisions/0007`) |
+| 채팅 요청이 500 | 서버 로그 | 요청 본문이 UTF-8 JSON이 아님 (Windows curl) → 400 으로 처리됨 |
 
 ## 에이전트가 틀리기 쉬운 데이터 사실 (자세히: docs/DATA.md)
 
-- TODO(07): 데이터를 읽으며 발견한, 겉보기와 다른 사실을 적으세요. 예(원본 프로젝트):
-  "섹션 제목은 제목이 아니라 1행 표다", "일부 페이지는 이미지라 OCR로 읽었고 `low_confidence` 로 표시된다",
-  "표에 학과 열이 없다", "수업시간은 시각이 아니라 교시 번호다".
+- **자기돌봄비는 1회 200만원 이용권**(고시 제3조). 인천·울산 공고, 온통청년, 청년ON 신청 페이지도 "연 200만원"으로 쓰지만 법령은 1회다.
+- **나이 34세 상한은 병역 기간만큼 늘어난다** (시행령 제11조①1 단서). 35세라고 바로 탈락시키지 말 것.
+- **"35세 이상 다른 가족"과 "주소 일치" 요건에는 예외가 있다** (시행규칙 제6조①②): 그 가족이 장애·중증질환 등이거나, 학업·취업으로 따로 살며 돌보는 경우.
+- **청년미래센터는 2026-11-01 기준 12곳 운영, 5곳(경기·경북·경남·제주·세종) 준비 중** (청년ON). 보도자료(2026.3)의 "4곳"은 낡은 정보.
+- **서울의 "자기돌봄비"는 두 가지**: 국가(1회 200만원, 13~34세, 2026.10.1~ 서울복지포털 접수)와 서울형(월 30만원, 9~39세, 2026년 마감).
+- `data/programs/programs.json` 은 생성물이다. 고칠 때는 검수 파일과 `scripts/build_programs.py` 를 고치고 다시 생성한다.
