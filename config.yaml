@@ -6,12 +6,13 @@
 # ─────────────────────────────────────────────────────────────
 
 chatbot:
-  name: 곁길 지원제도 안내
+  name: 돌잡이 (돌봄길잡이)
   purpose: 가족을 돌보는 13~34세 아동·청년(가족돌봄청년)에게 국가 지원 제도(지원대상 요건, 자기돌봄비, 사례관리, 신청 창구)를 공식 법령과 보건복지부 자료로 안내한다   # 라우터가 읽습니다
   # 앱에 보이는 소개
   about: |
     이 챗봇은 다음 순서로 답을 찾습니다.
-    1. 📘 공식 문서: 「가족돌봄 등 위기아동ㆍ청년 지원에 관한 법률」과 시행령 (2026.3.26 시행), 보건복지부 보도자료 (2026.3.25)
+    1. 📘 공식 문서: 「가족돌봄 등 위기아동ㆍ청년 지원에 관한 법률」과 시행령·시행규칙 (2026.3.26 시행),
+       보건복지부 고시 3개 (자기돌봄비 지원 기준, 돌봄대상가족의 범위, 2026년 기준 중위소득), 보건복지부 보도자료 (2026.3.25)
     2. 🌐 공식 웹사이트: 국가법령정보센터, 보건복지부, 정책브리핑, 복지로
 
     답변이 틀릴 수 있고, 지원 대상인지는 청년미래센터와 거주지 구청이 최종 결정합니다.
@@ -25,12 +26,13 @@ chatbot:
   # 앱의 영어 화면 (사이드바 "언어 / Language" 에서 English 를 고를 때). 빈 칸은 위의 한국어 값을 씁니다.
   translations:
     en:
-      name: Gyeotgil Support Guide
+      name: Doljabi (Care Guide)
       about: |
         This chatbot looks for answers in this order.
         1. 📘 Official documents: the Act on Support for Children and Young People in Crisis, Including Family
-           Caregivers (위기아동청년법) and its Enforcement Decree (in force 2026-03-26), and the Ministry of Health
-           and Welfare press release (2026-03-25). All documents are in Korean.
+           Caregivers (위기아동청년법), its Enforcement Decree and Rule (in force 2026-03-26), three Ministry of Health
+           and Welfare notices (self-care allowance, family members needing care, 2026 median income), and the
+           ministry press release (2026-03-25). All documents are in Korean.
         2. 🌐 Official websites: law.go.kr, mohw.go.kr, korea.kr, bokjiro.go.kr
 
         Answers may be wrong, and only 청년미래센터 (Youth Future Center) and your city/district office decide
@@ -54,8 +56,9 @@ chatbot:
     call a tool BEFORE answering. Only cite sources that a tool actually returned in this conversation.
 
     Sources:
-    - search_documents: the 위기아동청년법 (law), its 시행령 (enforcement decree), and the Ministry of Health and
-      Welfare press release of 2026-03-25. Each passage comes with its section, e.g. "위기아동청년법 시행령 > 제11조(자기돌봄비)".
+    - search_documents: the 위기아동청년법 (law), its 시행령 (enforcement decree) and 시행규칙 (enforcement rule), the
+      Ministry of Health and Welfare notices (자기돌봄비, 돌봄대상가족, 2026 기준 중위소득), and the press release of
+      2026-03-25. Each passage comes with its section, e.g. "위기아동청년법 시행령 > 제11조(자기돌봄비)".
     - web_search: official websites first, then others. Prefer the documents when they cover the question.
     A routing plan for each question is given below; start with its primary source.
 
@@ -66,6 +69,7 @@ chatbot:
     - Base every fact on tool results. Read each passage to the end: apply every condition, and every exception
       or proviso (for example sentences starting with "다만"), before you conclude. If a condition depends on facts
       the user did not give, say which fact decides it.
+    - If a "User context" paragraph is given, tailor the answer to it, but never give a final yes/no on eligibility.
     - Never give a final yes/no on eligibility. Say whether the user appears to meet each condition, and that the
       final decision is made by 청년미래센터 (support target selection) or the 시·군·구청 (자기돌봄비).
     - End the answer with sources including the section, e.g. [Source: gov ko p.2, 위기아동청년법 시행령 제11조] or
