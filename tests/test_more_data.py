@@ -28,3 +28,11 @@ def test_youth_items_carry_what_the_rules_need():
     assert all(i["period"]["kind"] in ("always", "range", "tbd") for i in youth)
     assert all("\n" not in i["summary"] and len(i["summary"]) <= 90 for i in d["items"])
     assert any(i["scope"] == "nation" for i in youth) and any("12" in i["sidos"] for i in youth)
+
+
+def test_youth_restriction_fields_and_zero_age():
+    d = json.loads(MORE.read_text(encoding="utf-8"))
+    youth = [i for i in d["items"] if i["source"] == "youth"]
+    assert all({"special", "married", "extra"} <= i.keys() for i in youth)
+    infants = next(i for i in youth if i["name"].startswith("가정양육수당"))
+    assert infants["age"] == [0, 0]                  # 나이 제한 Y, 0~0세: 제한 없음이 아니다

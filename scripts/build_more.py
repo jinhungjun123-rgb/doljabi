@@ -15,7 +15,9 @@ RAW = ROOT / "data" / "programs" / "raw" / AS_OF
 OUT = ROOT / "data" / "programs" / "more.json"
 YOUTH_LINK = "https://www.youthcenter.go.kr/youthPolicy/ythPlcyTotalSearch/ythPlcyDetail/"
 
-ANY_JOB, ANY_SCHOOL = "0013010", "0049010"           # 제한 없음
+ANY_JOB, ANY_SCHOOL, ANY_SPECIAL = "0013010", "0049010", "0014010"   # 제한 없음
+MARRIED = {"0055001", "0055002"}                    # 기혼, 미혼 (0055003 제한 없음)
+NOTHING = re.compile(r"^(해당\s*없음|없음|-|무|x)$", re.I)
 NATION_MIN_SIDOS = 15                               # 시·도 15곳 이상이면 전국
 NATIONAL_THEMES = {"생활지원", "서민금융", "신체건강", "정신건강", "교육", "일자리", "주거", "보호·돌봄", "안전·위기", "법률", "문화·여가"}
 ONLY_FOR_OTHERS = {"보훈대상자", "다문화·탈북민"}
@@ -80,7 +82,10 @@ def youth_items(policies: list[dict], reviewed: set[str]) -> list[dict]:
         whole = all(codes_by_sido[s] <= set(zips) for s in sidos)
         scope = "nation" if len(sidos) >= NATION_MIN_SIDOS else "sido" if whole else "local"
         lo, hi = number(p.get("sprtTrgtMinAge")), number(p.get("sprtTrgtMaxAge"))
-        age = [lo or 0, hi or 99] if p.get("sprtTrgtAgeLmtYn") == "Y" and (lo or hi) else None
+        age = None
+        if p.get("sprtTrgtAgeLmtYn") == "Y" and (lo is not None or hi is not None):
+            lo = lo or 0
+            age = [lo, 99 if hi is None or (hi == 0 and lo > 0) else hi]   # 0~0세는 그대로 (영유아 대상)
         income = None
         if p.get("earnCndSeCd") == "0043002":
             top = number(p.get("earnMaxAmt"))
@@ -92,6 +97,9 @@ def youth_items(policies: list[dict], reviewed: set[str]) -> list[dict]:
             "link": YOUTH_LINK + p["plcyNo"], "group": youth_group(p),
             "zips": zips if scope == "local" else [], "sidos": sidos, "scope": scope, "age": age, "income": income, "period": period,
             "jobs": [] if ANY_JOB in jobs else jobs, "schools": [] if ANY_SCHOOL in schools else schools,
+            "special": [c for c in split(p.get("sbizCd")) if c != ANY_SPECIAL],
+            "married": p.get("mrgSttsCd") if p.get("mrgSttsCd") in MARRIED else None,
+            "extra": not NOTHING.match(re.sub(r"\s+", " ", p.get("addAplyQlfcCndCn") or "").strip() or "-"),
         })
     return items
 
