@@ -38,6 +38,19 @@ CENTER_REGION = {
     "경상북도": "경북", "경상남도": "경남", "제주특별자치도": "제주",
 }
 MISSING = {"", "-", "확인 안 됨"}
+# 검수 파일에서 쓰던 내부 표현 → 사용자에게 보이는 말 (값의 뜻은 바꾸지 않음)
+USER_WORDING = [
+    (re.compile(r"data/docs \(법령·고시, 이미 챗봇 문서\)"), "위기아동청년법·시행령·시행규칙, 보건복지부 고시"),
+    (re.compile(r"\('청년미래센터 목록' 시트[^)]*\)"), "('센터 찾기'에서 확인)"),
+]
+
+
+def _user_text(value):
+    if not isinstance(value, str):
+        return value
+    for pattern, repl in USER_WORDING:
+        value = pattern.sub(repl, value)
+    return value
 
 
 def _notice(pid: str, row: dict) -> str | None:
@@ -51,6 +64,7 @@ def _notice(pid: str, row: dict) -> str | None:
 
 
 def program(row: dict) -> dict:
+    row = {k: _user_text(v) for k, v in row.items()}
     pid = row["ID"]
     return {"id": pid, "group": GROUP[pid[0]], "name": row["사업명"], "summary": SUMMARY[pid], "region": REGION.get(pid),
             "apply_type": row["신청 구분"], "target": row["대상 (나이·조건)"], "income": row["소득 기준"],

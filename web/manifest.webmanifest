@@ -1,0 +1,9 @@
+{
+  "name": "돌잡이 · 돌봄길잡이",
+  "short_name": "돌잡이",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff8f2",
+  "theme_color": "#f07c5a",
+  "lang": "ko"
+}

@@ -13,8 +13,8 @@
    "benefit": "1회에 한하여 200만원 이용권(카드) (자기돌봄비 고시 제3조, 시행령 제11조④). 지급 결정일부터 1개월 이내 지급 (시행령 제11조③). 청년ON: 전담인력과 상담 후 자기돌봄계획 수립 필요. 한 가구에 가족돌봄청(소)년이 2명 이상이면 각자 신청 가능",
    "how": "전국 공통: 청년ON 온라인(www.mohw2030.co.kr, 휴대폰 본인인증) 또는 주소지 읍·면·동 행정복지센터·청년미래센터 방문. 시·도마다 접수 창구가 다를 수 있음 (서울: 서울복지포털 welfare.seoul.go.kr). 단계: ① 접수 → ② 처리: 청년미래센터 (시행령 제16조②9호) → ③ 결정·지급: 시장·군수·구청장 (시행령 제11조②③, 고시 제4조 결정 통지). 센터가 없는 지역은 지급 절차를 거주지 구청에 확인. 서류: 자기돌봄비 지급 신청서(시행규칙 별지 제3호서식) + 신분증 사본, 대리 신청이면 위임장 + 대리인 신분증 (시행규칙 제8조)",
    "period": "법령에 없음. 지역별 공고 (서울: 2026.10.1~, 140명, 매월 15일까지 접수분 심사, 조기 마감 가능)",
-   "contact": "보건복지상담센터 129, 지역 청년미래센터 ('청년미래센터 목록' 시트)",
-   "source": "data/docs (법령·고시, 이미 챗봇 문서); 청년ON 가족돌봄청(소)년 온라인 신청 페이지 https://capi.kmaresearch.co.kr/survey/20260266/index_1.asp; https://mediahub.seoul.go.kr/archives/2019538",
+   "contact": "보건복지상담센터 129, 지역 청년미래센터 ('센터 찾기'에서 확인)",
+   "source": "위기아동청년법·시행령·시행규칙, 보건복지부 고시; 청년ON 가족돌봄청(소)년 온라인 신청 페이지 https://capi.kmaresearch.co.kr/survey/20260266/index_1.asp; https://mediahub.seoul.go.kr/archives/2019538",
    "notice": "일부 지역 안내는 '연 200만원'이라고 쓰지만, 법령은 1회예요.",
    "closed": false,
    "checked": "2026-11-01"
@@ -31,8 +31,8 @@
    "benefit": "상담 → 지원대상자 선정 → 14일 이내 사례관리 계획 (시행령 제9조) → 서비스 제공·연계. 청년ON: 아픈 가족에게는 통합돌봄·노인장기요양·일상돌봄 등 의료·돌봄 연계, 본인에게는 5대 서비스(민관 교육장학금, 금융, 주거, 법률, 일자리) 연계 (전담인력과 상담 후 결정)",
    "how": "[센터 설치 지역] 읍·면·동, 온라인(청년ON 등), 청년미래센터 → 선정·사례관리: 청년미래센터. [센터 미설치 지역] 읍·면·동, 온라인(위기알림앱, 복지로 등) → 공공부문 사례관리(통합사례관리, 드림스타트 등)와 지자체 자체사업 (보도자료 2026.3.25 6쪽 체계도). 서류: 사례관리 신청서, 주민등록등본·가족관계증명서, 진단서·소견서·장애인증명서, (35세 가족·주소 불일치 시) 돌봄 전담 증빙 (시행규칙 제3조③)",
    "period": "연중 (상시)",
-   "contact": "129, 지역 청년미래센터 ('청년미래센터 목록' 시트: 운영 10곳, 준비 중 7곳)",
-   "source": "data/docs (법령·고시, 이미 챗봇 문서); 청년ON 가족돌봄청(소)년 온라인 신청 페이지 https://capi.kmaresearch.co.kr/survey/20260266/index_1.asp; https://www.bokjiro.go.kr/ssis-tbu/twataa/wlfareInfo/moveTWAT52011M.do?wlfareInfoId=WLF00006301",
+   "contact": "129, 지역 청년미래센터 ('센터 찾기'에서 확인)",
+   "source": "위기아동청년법·시행령·시행규칙, 보건복지부 고시; 청년ON 가족돌봄청(소)년 온라인 신청 페이지 https://capi.kmaresearch.co.kr/survey/20260266/index_1.asp; https://www.bokjiro.go.kr/ssis-tbu/twataa/wlfareInfo/moveTWAT52011M.do?wlfareInfoId=WLF00006301",
    "notice": null,
    "closed": false,
    "checked": "2026-11-01"
@@ -86,7 +86,7 @@
    "how": "법령에 신청 절차 없음. 국민건강보험공단(장기요양) 또는 청년미래센터 경유로 추정",
    "period": "법령에 없음",
    "contact": "국민건강보험공단 1577-1000, 129",
-   "source": "data/docs (법령·고시, 이미 챗봇 문서)",
+   "source": "위기아동청년법·시행령·시행규칙, 보건복지부 고시",
    "notice": null,
    "closed": false,
    "checked": "2026-11-01"
@@ -104,7 +104,7 @@
    "how": "거주지 시·군·구청 (기초생활 담당) 또는 129 안내",
    "period": "법령에 없음",
    "contact": "129",
-   "source": "data/docs (법령·고시, 이미 챗봇 문서); 참고 https://www.bokjiro.go.kr/ssis-tbu/twataa/wlfareInfo/moveTWAT52011M.do?wlfareInfoId=WLF00001138 (자활근로)",
+   "source": "위기아동청년법·시행령·시행규칙, 보건복지부 고시; 참고 https://www.bokjiro.go.kr/ssis-tbu/twataa/wlfareInfo/moveTWAT52011M.do?wlfareInfoId=WLF00001138 (자활근로)",
    "notice": null,
    "closed": false,
    "checked": "2026-11-01"

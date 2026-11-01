@@ -13,6 +13,12 @@ def test_programs_file_matches_review():
     assert {p["id"] for p in d["programs"] if p["closed"]} == {"C01", "C07"}
 
 
+def test_no_review_file_wording_reaches_users():
+    for p in load_programs()["programs"]:
+        text = " ".join(str(v) for v in p.values())
+        assert "data/docs" not in text and "시트" not in text and "Claude" not in text, p["id"]
+
+
 def test_centers_cover_all_regions():
     d = load_programs()
     assert sorted(c["region"] for c in d["centers"]) == sorted(REGIONS)
