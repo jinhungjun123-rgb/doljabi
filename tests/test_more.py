@@ -29,7 +29,7 @@ def test_age_income_job_conditions():
     assert rows(youth(age=[19, 34]), ME)["age"] == "ok"
     assert rows(youth(age=[19, 34]), {**ME, "age": 40})["age"] == "no"
     assert rows(youth(income=[0, 5000]), {**ME, "income_band": "lt100"})["income"] == "ok"
-    assert rows(youth(income=[0, 2400]), {**ME, "income_band": "gt256"})["income"] == "no"
+    assert rows(youth(income=[0, 2400]), {**ME, "income_band": "gt256"})["income"] == "unknown"
     assert rows(youth(income=[0, 2000]), {**ME, "income_band": "100_200"})["income"] == "unknown"
     assert rows(youth(jobs=["0013003"]), {**ME, "activity": "working"})["job"] == "no"
     assert rows(youth(jobs=["0013003"]), {**ME, "activity": "rest_6m_plus"})["job"] == "ok"
@@ -50,7 +50,7 @@ def test_region_rows():
 
 def test_no_region_keeps_nationwide_only():
     assert judge(youth(), {"age": 20}, TODAY) is None
-    nation = judge(youth(scope="nation", sidos=["11", "43"]), {"age": 20}, TODAY)
+    nation = judge(youth(scope="nation", sidos=["11", "43"], org="고용노동부"), {"age": 20}, TODAY)
     assert nation and "region" not in {c["key"] for c in nation["conditions"]}
     assert judge(national(), {"age": 20}, TODAY) is not None
 
@@ -123,3 +123,34 @@ def test_target_named_only_in_the_title_needs_checking():
     assert rows(youth(name="자립준비청년 디지털 진로지원"), ME)["special"] == "unknown"
     assert rows(youth(name="청년 예술인 창작 지원"), ME)["special"] == "unknown"
     assert "special" not in rows(youth(name="청년 문화예술패스"), ME)
+
+
+def test_local_programs_listed_as_nationwide_follow_their_office():
+    # zipCd 에 전국이 다 적혀 있어도 담당 기관이 시·군·구면 그 지역 사업이다 (리뷰: 의성군 사업이 충북 사용자에게 ok)
+    uiseong = youth(scope="nation", sidos=["11", "43", "47"], org="경상북도 의성군 일자리경제과")
+    assert judge(uiseong, ME, TODAY) is None
+    assert rows(uiseong, {"age": 20, "region": "경북", "sigungu": "의성군"})["region"] == "ok"
+    assert "region" not in rows(youth(scope="nation", sidos=["11"], org="고용노동부 청년고용정책관"), ME)
+
+
+def test_ok_needs_something_about_the_user():
+    # 신청 기간만 맞는 카드, 빈 프로필은 "받을 수 있어 보여요"가 아니다
+    assert judge(youth(scope="nation", org="보건복지부"), ME, TODAY)["status"] == "check"
+    assert judge(youth(scope="nation", org="보건복지부"), {}, TODAY)["status"] == "check"
+    assert all(r is None or r["status"] != "ok" for r in (judge(i, {}, TODAY) for i in load_more()["items"]))
+    teen = rows(youth(scope="nation", org="보건복지부"), {"age": 15})
+    assert teen["age"] == "unknown"                       # 나이 칸이 없는 청년정책: 청소년에게는 확인 필요
+
+
+def test_typed_address_matches_word_by_word():
+    local = youth(scope="local", zips=["41461"], sidos=["41"], org="경기도 용인시 청년담당관")
+    for typed in ("용인시 수지구", "경기 용인시", "용인"):
+        assert rows(local, {"age": 20, "region": "경기", "sigungu": typed})["region"] == "ok"
+    namyangju = youth(scope="local", zips=["41360"], sidos=["41"], org="경기도 남양주시 청년정책과")
+    assert rows(namyangju, {"age": 20, "region": "경기", "sigungu": "양주시"})["region"] == "no"
+    assert judge(local, {"age": 20, "region": "경기", "sigungu": True}, TODAY) is not None
+
+
+def test_income_outside_the_range_is_only_a_check():
+    # 개인·가구 기준과 단위를 데이터로 알 수 없어 범위 밖이어도 "어려워 보여요"로 접지 않는다
+    assert rows(youth(income=[0, 2400]), {**ME, "income_band": "gt256"})["income"] == "unknown"

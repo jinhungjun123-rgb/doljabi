@@ -19,7 +19,7 @@ mkdir -p build/space/data/programs build/space/app
 cp -r Dockerfile requirements.lock pyproject.toml src web config.yaml index build/space/
 cp app/api.py build/space/app/
 cp -r data/parsed build/space/data/
-cp data/programs/programs.json build/space/data/programs/
+cp data/programs/programs.json data/programs/more.json build/space/data/programs/
 cp deploy/README.space.md build/space/README.md
 find build/space -name "__pycache__" -type d -prune -exec rm -rf {} +
 

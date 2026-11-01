@@ -118,3 +118,13 @@ def test_chat_about_is_cleaned():
     assert "javascript" not in FakeBot.last_context
     c.post("/api/chat", json={"question": "q", "about": "x"})
     assert FakeBot.last_context is None
+
+
+def test_more_is_compressed():
+    r = TestClient(create_app(bot_factory=FakeBot)).post("/api/more", json={"profile": {"age": 20}}, headers={"accept-encoding": "gzip"})
+    assert r.headers.get("content-encoding") == "gzip"
+
+
+def test_backup_deploy_ships_the_app_data():
+    script = (Path(__file__).resolve().parents[1] / "scripts" / "deploy_hf.sh").read_text(encoding="utf-8")
+    assert "data/programs/more.json" in script

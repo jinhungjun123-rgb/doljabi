@@ -9,6 +9,7 @@
 
 Personal information stays out of the server's disk: traces are off here; run with CACHE_MODE=nostore.
 """
+import gzip
 import json
 import logging
 import queue
@@ -20,7 +21,7 @@ from pathlib import Path
 
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import JSONResponse, StreamingResponse
+from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
@@ -116,7 +117,11 @@ def create_app(bot_factory=None) -> Starlette:
         if body is None:
             return _bad_request()
         today = datetime.now(timezone(timedelta(hours=9))).strftime("%Y%m%d")   # application periods are in Korean time
-        return JSONResponse(more_for(body.get("profile") or {}, more_data, today))
+        payload = json.dumps(more_for(body.get("profile") or {}, more_data, today), ensure_ascii=False).encode()
+        if "gzip" in request.headers.get("accept-encoding", ""):   # about 0.5MB of JSON → about 0.1MB for phones
+            return Response(gzip.compress(payload), media_type="application/json",
+                            headers={"Content-Encoding": "gzip", "Vary": "Accept-Encoding"})
+        return Response(payload, media_type="application/json")
 
     async def health(_: Request):
         return JSONResponse({"ok": True, "index": INDEX_DIR.exists() and any(INDEX_DIR.iterdir())})

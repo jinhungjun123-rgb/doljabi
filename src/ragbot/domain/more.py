@@ -16,6 +16,13 @@ GROUP_LABELS = {"life": "생활·금융", "health": "건강·마음", "housing":
 # 온통청년 지역 코드 앞 두 자리. 광주·전남은 전남광주통합특별시(12) 하나로 나온다 (원본 2026-11-01)
 SIDO_CODE = {"서울": "11", "부산": "26", "대구": "27", "인천": "28", "광주": "12", "대전": "30", "울산": "31", "세종": "36",
              "경기": "41", "강원": "51", "충북": "43", "충남": "44", "전북": "52", "전남": "12", "경북": "47", "경남": "48", "제주": "50"}
+# 담당 기관 이름의 첫 낱말 → 시·도 코드 (zipCd 에 전국이 적혀 있어도 시·군·구 사업인 경우를 가려낸다)
+ORG_SIDO = {"서울특별시": "11", "부산광역시": "26", "대구광역시": "27", "인천광역시": "28", "광주광역시": "12", "대전광역시": "30",
+            "울산광역시": "31", "세종특별자치시": "36", "경기도": "41", "강원특별자치도": "51", "강원도": "51", "충청북도": "43",
+            "충청남도": "44", "전북특별자치도": "52", "전라북도": "52", "전라남도": "12", "전남광주통합특별시": "12", "경상북도": "47",
+            "경상남도": "48", "제주특별자치도": "50"}
+# 이 조건 중 하나는 맞아야 "받을 수 있어 보여요" (신청 기간만 맞는 카드는 사용자에 대해 확인한 것이 없다)
+ABOUT_USER = {"age", "region", "income", "job", "school", "target", "special"}
 SIDO_NAME = {"12": "광주·전남", **{code: name for name, code in SIDO_CODE.items() if code != "12"}}
 # 온통청년 취업 상태·학력 코드 중 뜻을 원본 표본으로 확인한 것만 쓴다
 JOB_NAME = {"0013001": "재직자", "0013003": "미취업자"}
@@ -47,8 +54,8 @@ def _age_row(item: dict, age) -> dict | None:
         if age is None:
             return _row("age", label, "unknown")
         return _row("age", label, "ok" if any(lo <= age <= hi for lo, hi in stages) else "no")
-    if not item["age"]:
-        return None
+    if not item["age"]:   # 나이 칸이 없는 청년정책: 청년 나이(19~39세)가 아니면 확인 필요
+        return _row("age", "나이 조건 (원문 확인)", "unknown") if age is not None and not 19 <= age <= 39 else None
     lo, hi = item["age"]
     if lo == hi == 0:                       # 나이 제한은 있는데 범위가 글로만 적힘 (원본 데이터)
         return _row("age", "나이 조건 (원문 확인)", "unknown")
@@ -60,26 +67,42 @@ def _age_row(item: dict, age) -> dict | None:
 
 def _region_row(item: dict, profile: dict) -> dict | None | bool:
     """False: 목록에서 뺀다. None: 지역 조건 없음 (전국)."""
-    if item["source"] == "national" or item["scope"] == "nation":
+    if item["source"] == "national":
         return None
     code = SIDO_CODE.get(profile.get("region"))
+    if item["scope"] == "nation":
+        office = ORG_SIDO.get(item["org"].split(" ")[0])
+        if office is None:                     # 중앙부처·공공기관: 전국
+            return None
+        if code != office:
+            return False
+        return _district_row(item, profile) or _row("region", f"사는 곳: {SIDO_NAME[code]}", "ok")
     if code is None or code not in item["sidos"]:
         return False
     if item["scope"] == "sido":
         return _row("region", f"사는 곳: {SIDO_NAME[code]}", "ok")
+    return _district_row(item, profile) or _row("region", f"사는 곳: {item['org']}", "unknown")
+
+
+def _district_row(item: dict, profile: dict) -> dict | None:
+    """담당 기관이 시·군·구면 입력한 시·군·구와 낱말 단위로 비교 ("용인시 수지구", "경기 용인시" → 용인시). 기관이 시·도면 None."""
     district = re.match(r"\S+\s+(\S+(?:시|군|구))(?:\s|$)", item["org"])
-    label = f"사는 곳: {district.group(1) if district else item['org']}"
-    mine = re.sub(r"(시|군|구)$", "", (profile.get("sigungu") or "").strip())
-    if not district or len(mine) < 2:
+    if not district:
+        return None
+    label = f"사는 곳: {district.group(1)}"
+    typed = profile.get("sigungu") if isinstance(profile.get("sigungu"), str) else ""
+    stems = {w for w in (re.sub(r"(시|군|구)$", "", x) for x in typed.split()) if len(w) >= 2}
+    if not stems:
         return _row("region", label, "unknown")
-    return _row("region", label, "ok" if mine in district.group(1) else "no")
+    return _row("region", label, "ok" if re.sub(r"(시|군|구)$", "", district.group(1)) in stems else "no")
 
 
 def _income_row(item: dict, band) -> dict | None:
     if item["source"] != "youth" or not item["income"]:
         return None
     lo, hi = item["income"]
-    label = f"본인 연소득 {lo}~{hi}만원" if lo and hi else f"본인 연소득 {hi}만원 이하" if hi else f"본인 연소득 {lo}만원 이상"
+    label = f"연소득 {lo}~{hi}만원" if lo and hi else f"연소득 {hi}만원 이하" if hi else f"연소득 {lo}만원 이상"
+    label += " (본인·가구 기준은 원문 확인)"
     if band not in INCOME_BAND:
         return _row("income", label, "unknown")
     mine_lo, mine_hi = INCOME_BAND[band]
@@ -87,7 +110,7 @@ def _income_row(item: dict, band) -> dict | None:
     top = hi if hi else float("inf")
     if lo <= mine_lo and mine_hi <= top:
         return _row("income", label, "ok")
-    return _row("income", label, "no" if mine_hi < lo or mine_lo > top else "unknown")
+    return _row("income", label, "unknown")   # 개인·가구 기준과 단위를 데이터로 알 수 없어 범위 밖이어도 "어려워 보여요"로 접지 않는다
 
 
 def _period_row(item: dict, today: str) -> dict | None | bool:
@@ -153,8 +176,12 @@ def judge(item: dict, profile: dict, today: str) -> dict | None:
             _code_row("school", item.get("schools") or [], SCHOOL_NAME, USER_SCHOOL.get(activity)),
             _target_row(item, profile), *_restriction_rows(item, profile)]
     conditions = [r for r in rows if r]
+    status = card_status(conditions)
+    if status == "ok" and not any(c["key"] in ABOUT_USER and c["result"] == "ok" for c in conditions):
+        status = "check"
     shown = {k: item[k] for k in ("id", "source", "name", "summary", "org", "link", "group")}
-    return {**shown, "local": item.get("scope") in ("sido", "local"), "status": card_status(conditions), "conditions": conditions}
+    local = item.get("scope") in ("sido", "local") or any(c["key"] == "region" for c in conditions)
+    return {**shown, "local": local, "status": status, "conditions": conditions}
 
 
 def _sort_key(r: dict) -> tuple:
