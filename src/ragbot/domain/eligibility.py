@@ -151,6 +151,12 @@ def profile_summary(profile: dict) -> str:
     parts = []
     if profile.get("age") is not None:
         parts.append(f"{profile['age']}세" + (f" (군 복무 {profile['military_months']}개월)" if profile.get("military_months") else ""))
+        if profile.get("military_months"):
+            # 모델이 "가산"을 나이에 더하는 것으로 잘못 읽으므로 계산 결과를 준다 (docs/decisions/0007)
+            years = ceil(profile["military_months"] / 12)
+            met = _age(profile, 13, 34, "", military=True)["result"] == "ok"
+            parts.append(f"나이 상한 34세 + 군 복무 {years}년 = {34 + years}세 (시행령 제11조①1 단서) → 나이 조건 "
+                         + ("충족" if met else "미충족"))
     if profile.get("region"):
         parts.append(" ".join(x for x in (profile["region"], profile.get("sigungu")) if x) + " 거주")
     for key in ("relations", "conditions"):

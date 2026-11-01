@@ -76,3 +76,10 @@ def test_card_order_and_status_rule():
 def test_profile_summary():
     s = profile_summary(BASE)
     assert "20세" in s and "충북" in s and "최종" in s
+
+
+def test_profile_summary_states_the_age_limit_raised_by_military_service():
+    # 시행령 제11조①1 단서: 34세 상한에 병역 기간을 더한다. 계산은 코드가 하고, 채팅 모델에는 결과를 준다.
+    s = profile_summary({**BASE, "age": 35, "military_months": 24})
+    assert "36세" in s and "충족" in s
+    assert "36세" not in profile_summary({**BASE, "age": 35})
