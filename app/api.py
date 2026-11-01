@@ -4,6 +4,7 @@
   GET  /api/programs   reviewed programs and centers (data/programs/programs.json)
   POST /api/match      {"profile"} → card status per program, from the domain rules (no LLM)
   POST /api/chat       {"question", "history", "profile"} → server-sent events: progress…, answer | error
+  POST /api/more       {"profile"} → general programs from public data, grouped, each with automatic condition checks
   GET  /api/health     {"ok", "index"}
 
 Personal information stays out of the server's disk: traces are off here; run with CACHE_MODE=nostore.
@@ -14,6 +15,7 @@ import queue
 import re
 import threading
 import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from starlette.applications import Starlette
@@ -24,6 +26,7 @@ from starlette.staticfiles import StaticFiles
 
 from ragbot.config import INDEX_DIR
 from ragbot.domain.eligibility import clean_profile, match, profile_summary
+from ragbot.domain.more import about_summary, load_more, more_for
 from ragbot.domain.programs import load_programs
 
 WEB_DIR = Path(__file__).resolve().parents[1] / "web"
@@ -85,6 +88,7 @@ def present(ans) -> dict:
 
 def create_app(bot_factory=None) -> Starlette:
     data = load_programs()
+    more_data = load_more()
     state = {"bot": None}
     lock = threading.Lock()
 
@@ -107,6 +111,13 @@ def create_app(bot_factory=None) -> Starlette:
             return _bad_request()
         return JSONResponse(match(body.get("profile") or {}, data))
 
+    async def more_route(request: Request):
+        body = await _body(request)
+        if body is None:
+            return _bad_request()
+        today = datetime.now(timezone(timedelta(hours=9))).strftime("%Y%m%d")   # application periods are in Korean time
+        return JSONResponse(more_for(body.get("profile") or {}, more_data, today))
+
     async def health(_: Request):
         return JSONResponse({"ok": True, "index": INDEX_DIR.exists() and any(INDEX_DIR.iterdir())})
 
@@ -118,7 +129,8 @@ def create_app(bot_factory=None) -> Starlette:
         history = body.get("history") if isinstance(body.get("history"), list) else []
         history = [m for m in history if isinstance(m, dict) and m.get("role") in ("user", "assistant")][-6:]
         profile = clean_profile(body.get("profile"))
-        context = profile_summary(profile) if profile else None
+        parts = (profile_summary(profile) if profile else None, about_summary(body.get("about")))
+        context = "\n".join(x for x in parts if x) or None
         events: queue.Queue = queue.Queue()
 
         def run():
@@ -149,6 +161,7 @@ def create_app(bot_factory=None) -> Starlette:
 
     return Starlette(routes=[
         Route("/api/programs", programs), Route("/api/match", match_route, methods=["POST"]),
+        Route("/api/more", more_route, methods=["POST"]),
         Route("/api/chat", chat, methods=["POST"]), Route("/api/health", health),
         Mount("/", StaticFiles(directory=WEB_DIR, html=True)),
     ])

@@ -98,3 +98,23 @@ def test_only_http_links_become_web_sources():
     from app.api import present
     ans = Answer(answer="답 [Source: web javascript:alert(1)] [Source: web https://www.bokjiro.go.kr]", tool_calls=[])
     assert present(ans)["web"] == ["https://www.bokjiro.go.kr"]
+
+
+def test_more_endpoint():
+    c = TestClient(create_app(bot_factory=FakeBot))
+    r = c.post("/api/more", json={"profile": {"age": 20, "region": "충북"}})
+    assert r.status_code == 200
+    groups = r.json()["groups"]
+    assert groups and all("status" in i and "conditions" in i for g in groups for i in g["items"])
+    bad = c.post("/api/more", content="질문".encode("cp949"), headers={"content-type": "application/json"})
+    assert bad.status_code == 400
+
+
+def test_chat_about_is_cleaned():
+    c = TestClient(create_app(bot_factory=FakeBot))
+    about = {"name": "가" * 500, "org": "기관", "summary": "설명", "link": "javascript:alert(1)"}
+    c.post("/api/chat", json={"question": "q", "about": about})
+    assert "가" * 80 in FakeBot.last_context and "가" * 81 not in FakeBot.last_context
+    assert "javascript" not in FakeBot.last_context
+    c.post("/api/chat", json={"question": "q", "about": "x"})
+    assert FakeBot.last_context is None

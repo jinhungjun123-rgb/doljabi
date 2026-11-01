@@ -173,3 +173,23 @@ def more_for(profile: dict, data: dict, today: str) -> dict:
             groups.append({"key": key, "label": label, "items": [r for r in mine if r["status"] != "no"],
                            "no_items": [r for r in mine if r["status"] == "no"]})
     return {"as_of": data["as_of"], "groups": groups}
+
+
+def about_summary(about) -> str | None:
+    """채팅 맥락: 사용자가 일반 지원 목록에서 고른 사업. 화면이 보낸 값이므로 글자 수를 자르고 http(s) 링크만 둔다."""
+    if not isinstance(about, dict):
+        return None
+
+    def text(key: str, limit: int) -> str:
+        value = about.get(key)
+        return re.sub(r"\s+", " ", value).strip()[:limit] if isinstance(value, str) else ""
+
+    name, org, summary, link = text("name", 80), text("org", 80), text("summary", 200), text("link", 300)
+    if not name:
+        return None
+    facts = [f"사업 이름: {name}"] + [f"{k}: {v}" for k, v in (("담당", org), ("설명", summary)) if v]
+    if re.match(r"https?://", link):
+        facts.append(f"원문: {link}")
+    return ("About this question (사용자가 앱의 '일반 지원' 목록에서 고른 사업): " + "; ".join(facts) + ". "
+            "이 사업은 공공데이터(온통청년·복지로)에서 온 것이라 법령 문서에는 없습니다. web_search 로 공식 사이트를 찾아 답하고, "
+            "웹 정보는 확인이 필요하다고 표시하세요. 받을 수 있는지 최종 판정은 하지 마세요.")
