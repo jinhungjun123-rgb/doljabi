@@ -7,7 +7,7 @@
 PYTHONPATH=src python -m ragbot index                                   # 문서 인덱스 (처음 한 번, 임베딩 API)
 PYTHONPATH=src CACHE_MODE=nostore uvicorn app.api:app --port 8000       # 앱: http://localhost:8000
 python scripts/build_programs.py                                        # 검수 결과 → data/programs/programs.json
-bash scripts/deploy_hf.sh                                               # Hugging Face 배포 (.env 의 HF_TOKEN, HF_SPACE)
+git push origin main                                                    # Vercel 배포 (docs/decisions/0008)
 ```
 
 `PYTHONPATH=src`: 이 PC의 conda 환경 `my_ragbot`은 다른 폴더(원본 템플릿)에 설치되어 있어서, 붙이지 않으면 그쪽 코드가 실행됩니다.

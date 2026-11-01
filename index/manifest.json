@@ -1,0 +1,8 @@
+{
+ "fingerprint": "256316d15ce3b9b5f885da5e75d3495b2fead308",
+ "embed_model": "bge-m3",
+ "n_chunks": 117,
+ "by_lang": {
+  "ko": 117
+ }
+}

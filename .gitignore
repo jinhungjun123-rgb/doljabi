@@ -1,6 +1,5 @@
 .env
 .cache/
-index/
 runs/
 data/courses.sqlite
 node_modules/

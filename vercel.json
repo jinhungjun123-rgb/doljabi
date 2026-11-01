@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "true",
+  "buildCommand": "true",
+  "outputDirectory": "web",
+  "regions": ["icn1"],
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 120,
+      "excludeFiles": "{node_modules/**,tests/**,eval/**,docs/**,tasks/**,runs/**,build/**,deploy/**,.cache/**,.superpowers/**,data/programs/review/**,data/programs/raw/**}"
+    }
+  },
+  "rewrites": [{ "source": "/api/(.*)", "destination": "/api/index" }]
+}

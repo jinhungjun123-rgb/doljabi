@@ -28,7 +28,8 @@ Python 3.11 환경에서 저장소 루트에서 실행합니다. **이 PC에서�
 |---|---|
 | `PYTHONPATH=src CACHE_MODE=nostore uvicorn app.api:app --port 8000` | 앱 서버 (화면 `web/`, API `/api/*`). 내 정보가 디스크에 남지 않게 nostore |
 | `python scripts/build_programs.py` | 검수 결과 → `data/programs/programs.json` (손으로 고치지 않음) |
-| `bash scripts/deploy_hf.sh` | Hugging Face Space 배포 (`DRY_RUN=1` 이면 묶음만 만듦) |
+| `git push origin main` | Vercel 배포 (GitHub 연결, 설정 `vercel.json`, 키는 Vercel 환경 변수). `index/` 를 바꿨으면 함께 커밋 |
+| `bash scripts/deploy_hf.sh` | 예비: Hugging Face Space 배포 (`DRY_RUN=1` 이면 묶음만 만듦) |
 |---|---|
 | `python -m ragbot build` | ingest + tables + index (데이터, `chunking`, `tables` 설정 변경 후) |
 | `python -m ragbot ingest` | kordoc 이 문서를 파싱 → `data/parsed/*.json` + `*.md` (파일 해시로 캐시) |

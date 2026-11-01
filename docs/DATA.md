@@ -125,7 +125,7 @@
 |---|---|---|
 | `data/parsed/*.json`, `*.md` | `python -m ragbot ingest` | 예 (파싱 변경을 리뷰할 수 있게) |
 | `data/tables/*.sqlite` | `python -m ragbot tables` | 아니요 |
-| `index/` | `python -m ragbot index` | 아니요 |
+| `index/` | `python -m ragbot index` | 예 (Vercel 이 GitHub 에서 받아 감, `docs/decisions/0008`) |
 | `runs/`, `.cache/` | `ask`, `eval` | 아니요 |
 | `data/programs/raw/<날짜>/` | `scripts/collect_programs.py`, `collect_details.py` (복지로·온통청년 API, 키는 `.env`) | 아니요 (약 15MB) |
 | `data/programs/review/*_v3.xlsx`, `.json` | `scripts/build_review.py` + 팀 검수·결정 (2026-11-01) | 예 (앱 데이터의 원본) |
