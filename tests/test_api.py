@@ -79,3 +79,22 @@ def test_health_and_static_home():
     c = TestClient(create_app(bot_factory=FakeBot))
     assert c.get("/api/health").json()["ok"] is True
     assert "돌잡이" in c.get("/").text
+
+
+def test_wrong_types_in_requests_do_not_break_the_server():
+    c = TestClient(create_app(bot_factory=FakeBot))
+    assert c.post("/api/match", json={"profile": {"age": "20", "conditions": 5}}).status_code == 200
+    assert c.post("/api/match", json={"profile": "x"}).status_code == 200
+    r = c.post("/api/chat", json={"question": "q", "history": ["x", {"role": "user", "content": "a"}], "profile": "x"})
+    assert r.status_code == 200 and events(r.text)[-1][0] == "answer"
+
+
+def test_chat_failure_is_logged_without_the_question(caplog):
+    TestClient(create_app(bot_factory=BrokenBot)).post("/api/chat", json={"question": "비밀 질문"})
+    assert "chat failed" in caplog.text and "비밀 질문" not in caplog.text
+
+
+def test_only_http_links_become_web_sources():
+    from app.api import present
+    ans = Answer(answer="답 [Source: web javascript:alert(1)] [Source: web https://www.bokjiro.go.kr]", tool_calls=[])
+    assert present(ans)["web"] == ["https://www.bokjiro.go.kr"]

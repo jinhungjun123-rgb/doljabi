@@ -10,12 +10,15 @@
     set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* 저장 안 됨 */ } },
     del: (k) => { try { localStorage.removeItem(k); } catch { /* 없음 */ } },
   };
+  // 옛 형식이나 손으로 고친 값: 형식이 틀리면 버리고 처음부터
+  const typesOk = (p) => ["age", "military_months"].every((k) => p[k] == null || Number.isInteger(p[k]))
+    && ["relations", "conditions"].every((k) => p[k] == null || Array.isArray(p[k]));
   function loadProfile() {
     const raw = store.get(PROFILE_KEY);
     if (!raw) return {};
     try {
       const p = JSON.parse(raw);
-      if (p && typeof p === "object" && !Array.isArray(p)) return p;
+      if (p && typeof p === "object" && !Array.isArray(p) && typesOk(p)) return p;
     } catch { /* 깨진 값 */ }
     store.del(PROFILE_KEY);
     return {};
@@ -227,7 +230,8 @@
     } catch (e) {
       console.error(e);
       app.innerHTML = `<p class="sub">⚠ 화면을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.</p>
-        <a class="btn" href="tel:129">📞 129</a>`;
+        <a class="btn" href="tel:129">📞 129</a>
+        <button type="button" class="btn ghost" data-go="clear">${esc(t().results.clear)}</button>`;
     }
   }
   function go(screen, params = {}) {

@@ -83,3 +83,21 @@ def test_profile_summary_states_the_age_limit_raised_by_military_service():
     s = profile_summary({**BASE, "age": 35, "military_months": 24})
     assert "36세" in s and "충족" in s
     assert "36세" not in profile_summary({**BASE, "age": 35})
+
+
+def test_part_of_a_service_year_needs_checking():
+    # 시행령 제11조①1 단서는 실제 복무 기간을 더한다: 35세 + 1개월은 생일 뒤 한 달만 해당하므로 "확인 필요"
+    age = cards({**BASE, "age": 35, "military_months": 1})["A01"]["conditions"][0]
+    assert age["result"] == "unknown"
+    assert cards({**BASE, "age": 36, "military_months": 24})["A01"]["conditions"][0]["result"] == "ok"
+    s = profile_summary({**BASE, "age": 35, "military_months": 1})
+    assert "나이 조건 확인 필요" in s and "나이 조건 충족" not in s
+
+
+def test_wrong_field_types_count_as_unanswered():
+    # 옛 형식이나 손으로 고친 저장값: 판정이 멈추지 않고 그 항목만 모르는 것으로 본다
+    for bad in ({"age": "20"}, {"conditions": 5}, {"relations": "parent"}, {"military_months": "x", "age": 35},
+                {"age": True}, {"living": ["together"]}):
+        c = cards({**BASE, **bad})
+        assert c["A01"]["status"] in ("ok", "check", "no")
+        profile_summary({**BASE, **bad})

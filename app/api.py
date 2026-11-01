@@ -9,6 +9,7 @@
 Personal information stays out of the server's disk: traces are off here; run with CACHE_MODE=nostore.
 """
 import json
+import logging
 import queue
 import re
 import threading
@@ -22,13 +23,14 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from ragbot.config import INDEX_DIR
-from ragbot.domain.eligibility import match, profile_summary
+from ragbot.domain.eligibility import clean_profile, match, profile_summary
 from ragbot.domain.programs import load_programs
 
 WEB_DIR = Path(__file__).resolve().parents[1] / "web"
 CHAT_TIMEOUT = 90   # seconds before the stream ends with an error event
 CITATION = re.compile(r"\s*\[Source:\s*([^\]]+)\]")
 ARTICLE = re.compile(r"제\d+조(?:의\d+)?")
+log = logging.getLogger(__name__)
 
 
 async def _body(request: Request) -> dict | None:
@@ -72,7 +74,7 @@ def present(ans) -> dict:
         tag = tag.strip()
         if tag.startswith("web"):
             url = tag[3:].strip(" :,")
-            if url and url not in web:
+            if re.match(r"https?://", url) and url not in web:   # 답 글에서 온 주소: javascript: 같은 것은 링크로 만들지 않음
                 web.append(url)
             continue
         label = tag.split(",", 1)[1].strip() if "," in tag else tag
@@ -113,8 +115,10 @@ def create_app(bot_factory=None) -> Starlette:
         question = str((body or {}).get("question") or "").strip()
         if body is None or not question:
             return _bad_request()
-        history = [m for m in body.get("history") or [] if m.get("role") in ("user", "assistant")][-6:]
-        context = profile_summary(body["profile"]) if body.get("profile") else None
+        history = body.get("history") if isinstance(body.get("history"), list) else []
+        history = [m for m in history if isinstance(m, dict) and m.get("role") in ("user", "assistant")][-6:]
+        profile = clean_profile(body.get("profile"))
+        context = profile_summary(profile) if profile else None
         events: queue.Queue = queue.Queue()
 
         def run():
@@ -122,7 +126,8 @@ def create_app(bot_factory=None) -> Starlette:
                 ans = bot().answer(question, history, context=context,
                                    on_progress=lambda step, d: events.put(("progress", {"step": step, **d})))
                 events.put(("answer", present(ans)))
-            except Exception:   # the screen shows a fallback with phone numbers; details stay in the server log
+            except Exception:   # the screen shows a fallback with phone numbers; details go to the server log
+                log.exception("chat failed")
                 events.put(("error", {"message": "unavailable"}))
             events.put(None)
 
@@ -133,6 +138,7 @@ def create_app(bot_factory=None) -> Starlette:
                 try:
                     item = events.get(timeout=max(0.1, deadline - time.monotonic()))
                 except queue.Empty:
+                    log.warning("chat timed out after %ss", CHAT_TIMEOUT)
                     yield _sse("error", {"message": "unavailable"})
                     return
                 if item is None:

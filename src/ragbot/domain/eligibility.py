@@ -11,6 +11,26 @@ MEDIAN_1P = "2,564,238원"   # 2026년 1인 가구 기준 중위소득 (보건�
 CARE_NEEDS = {"ltc_grade", "severe_disability", "mental_illness", "long_illness"}
 
 
+_NUMBERS, _LISTS = ("age", "military_months"), ("relations", "conditions")
+
+
+def clean_profile(profile) -> dict:
+    """형식이 틀린 항목(옛 저장값, 손으로 고친 값)을 뺀다. 빠진 항목은 답하지 않은 것과 같다."""
+    if not isinstance(profile, dict):
+        return {}
+    out = {}
+    for key, value in profile.items():
+        if key in _NUMBERS:
+            ok = isinstance(value, int) and not isinstance(value, bool)
+        elif key in _LISTS:
+            ok = isinstance(value, list) and all(isinstance(v, str) for v in value)
+        else:
+            ok = value is None or isinstance(value, (str, bool))
+        if ok:
+            out[key] = value
+    return out
+
+
 def _cond(label: str, law: str, result: str) -> dict:
     return {"label": label, "law": law, "result": result}
 
@@ -20,8 +40,11 @@ def _age(p: dict, lo: int, hi: int, law: str, military: bool = False) -> dict:
     age = p.get("age")
     if age is None:
         return _cond(label, law, "unknown")
-    top = hi + (ceil((p.get("military_months") or 0) / 12) if military else 0)
-    return _cond(label, law, "ok" if lo <= age <= top else "no")
+    # 실제 복무 기간을 더한다: 다 채운 해만큼은 확실하고, 남는 개월은 생일에 따라 달라 "확인 필요"
+    months = (p.get("military_months") or 0) if military else 0
+    if lo <= age <= hi + months // 12:
+        return _cond(label, law, "ok")
+    return _cond(label, law, "unknown" if lo <= age <= hi + ceil(months / 12) else "no")
 
 
 def _family(p: dict) -> dict:
@@ -119,6 +142,7 @@ def card_status(conditions: list[dict]) -> str:
 
 
 def match(profile: dict, data: dict) -> dict:
+    profile = clean_profile(profile)
     cards = []
     for program in data["programs"]:
         conditions = RULES[program["id"]](profile, program)
@@ -148,15 +172,17 @@ _TEXT = {
 
 def profile_summary(profile: dict) -> str:
     """채팅에 붙이는 사용자 상황 (답한 항목만)."""
+    profile = clean_profile(profile)
     parts = []
     if profile.get("age") is not None:
         parts.append(f"{profile['age']}세" + (f" (군 복무 {profile['military_months']}개월)" if profile.get("military_months") else ""))
         if profile.get("military_months"):
             # 모델이 "가산"을 나이에 더하는 것으로 잘못 읽으므로 계산 결과를 준다 (docs/decisions/0007)
-            years = ceil(profile["military_months"] / 12)
-            met = _age(profile, 13, 34, "", military=True)["result"] == "ok"
-            parts.append(f"나이 상한 34세 + 군 복무 {years}년 = {34 + years}세 (시행령 제11조①1 단서) → 나이 조건 "
-                         + ("충족" if met else "미충족"))
+            months = profile["military_months"]
+            top = f"{34 + months // 12}세" if months % 12 == 0 else f"34세 + {months}개월"
+            verdict = {"ok": "충족", "unknown": "확인 필요 (생일과 복무 기간에 따라 다름)", "no": "미충족"}
+            parts.append(f"나이 상한 34세 + 군 복무 {months}개월 = {top} (시행령 제11조①1 단서) → 나이 조건 "
+                         + verdict[_age(profile, 13, 34, "", military=True)["result"]])
     if profile.get("region"):
         parts.append(" ".join(x for x in (profile["region"], profile.get("sigungu")) if x) + " 거주")
     for key in ("relations", "conditions"):
