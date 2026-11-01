@@ -28,6 +28,7 @@ Python 3.11 환경에서 저장소 루트에서 실행합니다. **이 PC에서�
 |---|---|
 | `PYTHONPATH=src CACHE_MODE=nostore uvicorn app.api:app --port 8000` | 앱 서버 (화면 `web/`, API `/api/*`). 내 정보가 디스크에 남지 않게 nostore |
 | `python scripts/build_programs.py` | 검수 결과 → `data/programs/programs.json` (손으로 고치지 않음) |
+| `python scripts/build_more.py` | 공공데이터 원본 → `data/programs/more.json` ("일반 지원 더 보기", 손으로 고치지 않음) |
 | `git push origin main` | Vercel 배포 (GitHub 연결, 설정 `vercel.json`, 키는 Vercel 환경 변수). `index/` 를 바꿨으면 함께 커밋 |
 | `bash scripts/deploy_hf.sh` | 예비: Hugging Face Space 배포 (`DRY_RUN=1` 이면 묶음만 만듦) |
 |---|---|
@@ -119,6 +120,8 @@ index → tools → router → agent → evaluate → cli/app`. 모듈은 자기
 - **자기돌봄비는 1회 200만원 이용권**(고시 제3조). 인천·울산 공고, 온통청년, 청년ON 신청 페이지도 "연 200만원"으로 쓰지만 법령은 1회다.
 - **나이 34세 상한은 병역 기간만큼 늘어난다** (시행령 제11조①1 단서). 35세라고 바로 탈락시키지 말 것.
 - **"35세 이상 다른 가족"과 "주소 일치" 요건에는 예외가 있다** (시행규칙 제6조①②): 그 가족이 장애·중증질환 등이거나, 학업·취업으로 따로 살며 돌보는 경우.
+- **온통청년 지역 코드에서 광주·전남은 `12`(전남광주통합특별시) 하나**다 (강원 51, 전북 52). 29·46 이 아니다.
+  "나이 제한 있음, 0~0세"는 범위가 글로만 적힌 것(630개)이고, 복지로 국가 서비스는 자격이 설명 글에만 있다 → 자동 판정은 "확인 필요".
 - **청년미래센터는 2026-11-01 기준 12곳 운영, 5곳(경기·경북·경남·제주·세종) 준비 중** (청년ON). 보도자료(2026.3)의 "4곳"은 낡은 정보.
 - **서울의 "자기돌봄비"는 두 가지**: 국가(1회 200만원, 13~34세, 2026.10.1~ 서울복지포털 접수)와 서울형(월 30만원, 9~39세, 2026년 마감).
 - `data/programs/programs.json` 은 생성물이다. 고칠 때는 검수 파일과 `scripts/build_programs.py` 를 고치고 다시 생성한다.
