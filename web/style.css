@@ -71,7 +71,7 @@ h2 { font-size: 15px; margin: 22px 0 8px; color: var(--muted); }
 .st.ok { background: var(--ok-bg); color: var(--ok); }
 .st.check { background: var(--check-bg); color: var(--check); }
 .st.no { background: var(--no-bg); color: var(--no); }
-.card.more { border-style: dashed; color: var(--link); text-align: center; cursor: default; background: #fff; }
+.card.more { border-style: dashed; color: var(--link); text-align: center; background: #fff; }
 .card.guide { text-align: center; cursor: default; }
 .card.guide .links { display: flex; justify-content: center; gap: 12px; margin-top: 4px; font-weight: 700; }
 .foot { text-align: center; font-size: 13px; color: var(--muted); margin: 18px 0 8px; }
@@ -117,3 +117,7 @@ dd { margin: 4px 0 0; font-size: 15px; white-space: pre-line; word-break: keep-a
 .tabs button { flex: 1; border: 0; background: none; height: var(--tabs-h); font-size: 13px; color: #b39a8d; cursor: pointer; }
 .tabs button .ico { display: block; font-size: 20px; line-height: 1.2; }
 .tabs button.on { color: var(--main-dark); font-weight: 800; }
+/* 일반 지원 (공공데이터 자동 확인): 검수한 지원의 "법령 확인" 배지와 구분 */
+.tag.auto { background: #f1ecff; color: #5b4bb2; }
+.tag.src { background: #f3f3f3; color: #555; }
+.btn.small.wide { display: block; width: 100%; margin: 0 0 10px; }

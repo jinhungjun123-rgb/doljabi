@@ -161,7 +161,7 @@
       ${centerBlock(state.match.center)}
       ${section("national")}${section("linked")}${section("local")}
       <h2></h2>
-      <div class="card more">${esc(r.more)}<br><span class="note">${esc(r.moreSub)}</span></div>
+      <button type="button" class="card more" data-go="more">${esc(r.more)}<br><span class="note">${esc(r.moreSub)}</span></button>
       <div class="card guide">${esc(r.others)}<div class="links"><a href="${LINKS.bokjiro}" target="_blank" rel="noopener">복지로</a>
         <a href="${LINKS.youthCenter}" target="_blank" rel="noopener">온통청년</a><a href="tel:129">📞 129</a></div></div>
       <p class="foot">${esc(r.foot)}</p>`;
@@ -192,6 +192,60 @@
       <p class="foot">${esc(t().results.foot)}</p>`;
   }
 
+  // ---------------------------------------------------------------- 일반 지원 (공공데이터, 자동 확인)
+  const ICON = { ok: "✅", unknown: "❔", no: "❌" };
+  const SHOWN_PER_GROUP = 4;
+  async function loadMore() {
+    const key = JSON.stringify(state.profile);
+    if (!state.more || state.moreFor !== key) {
+      state.more = await api("/api/more", { profile: state.profile });
+      state.moreFor = key;
+      state.moreOpen = {};
+    }
+    return state.more;
+  }
+  const moreById = (id) => state.more?.groups.flatMap((g) => [...g.items, ...g.no_items]).find((i) => i.id === id);
+  function moreMeta(i) {
+    const m = t().more;
+    return `<span class="tag auto">${esc(m.badge)}</span>${statusPill(i.status)}<span class="tag src">${esc(m.source[i.source])}</span>`;
+  }
+
+  async function screenMore() {
+    const m = t().more, data = await loadMore(), open = state.moreOpen;
+    const card = (i) => `<button type="button" class="card" data-more="${esc(i.id)}"><span class="meta">${moreMeta(i)}</span>
+      <span class="name">${esc(i.name)}</span><span class="desc">${esc(i.summary)}</span></button>`;
+    const group = (g) => {
+      const all = open[g.key] ? g.items : g.items.slice(0, SHOWN_PER_GROUP);
+      const rest = g.items.length - all.length;
+      const no = g.no_items.length ? (open[`${g.key}:no`] ? g.no_items.map(card).join("")
+        : `<button type="button" class="linkbtn" data-open="${g.key}:no">${esc(m.showNo(g.no_items.length))}</button>`) : "";
+      return `<h2>${esc(g.label)}</h2>${all.map(card).join("")}
+        ${rest > 0 ? `<button type="button" class="btn ghost small wide" data-open="${g.key}">${esc(m.showMore(rest))}</button>` : ""}${no}`;
+    };
+    app.innerHTML = `<button type="button" class="back" data-go="results">${esc(t().detail.back)}</button>
+      <h1>${esc(m.title)}</h1><p class="sub">${esc(m.intro(data.as_of))}</p>
+      ${data.groups.length ? data.groups.map(group).join("") : `<p class="sub">${esc(m.empty)}</p>`}
+      <p class="foot">${esc(t().results.foot)}</p>`;
+  }
+
+  async function screenMoreDetail() {
+    const m = t().more;
+    await loadMore();
+    const i = moreById(state.params.moreId);
+    if (!i) return go("more");
+    const conds = i.conditions.length ? `<div class="conds">${i.conditions.map((c) => `<div class="cond"><span>${ICON[c.result]}</span>
+      <span>${esc(c.label)}</span></div>`).join("")}</div>` : "";
+    const link = /^https?:\/\//.test(i.link) ? i.link : LINKS.youthCenter;
+    app.innerHTML = `<button type="button" class="back" data-go="more">${esc(m.back)}</button>
+      <div class="meta">${moreMeta(i)}</div>
+      <h1>${esc(i.name)}</h1><p class="sub">${esc(i.summary)}</p>
+      ${conds}<p class="note">${esc(m.rest)}</p>
+      <dl><dt>${esc(m.org)}</dt><dd>${esc(i.org)}</dd></dl>
+      <div class="stack"><a class="btn" href="${esc(link)}" target="_blank" rel="noopener">${esc(m.open)}</a>
+        <button type="button" class="btn ghost" data-ask-more="${esc(i.id)}">${esc(m.ask)}</button></div>
+      <p class="foot">${esc(t().results.foot)}</p>`;
+  }
+
   // ---------------------------------------------------------------- 센터 찾기
   function screenCenters() {
     const c = t().centers, mine = state.profile.region;
@@ -213,8 +267,9 @@
   }
 
   // ---------------------------------------------------------------- 이동, 그리기
-  const screens = { q: screenQuestion, results: screenResults, detail: screenDetail, centers: screenCenters, chat: screenChatPlaceholder };
-  const TAB_OF = { q: "results", results: "results", detail: "results", chat: "chat", centers: "centers" };
+  const screens = { q: screenQuestion, results: screenResults, detail: screenDetail, more: screenMore, moreDetail: screenMoreDetail,
+    centers: screenCenters, chat: screenChatPlaceholder };
+  const TAB_OF = { q: "results", results: "results", detail: "results", more: "results", moreDetail: "results", chat: "chat", centers: "centers" };
 
   function renderChrome() {
     document.getElementById("brandSub").textContent = t().appSub;
@@ -271,6 +326,7 @@
       if (nav.dataset.go === "prev") return go("q", { step: step - 1 });
       if (nav.dataset.go === "start") return go("q", { step: 1 });
       if (nav.dataset.go === "results") return go("results");
+      if (nav.dataset.go === "more") return go("more");
       if (nav.dataset.go === "clear" && window.confirm(t().results.clearConfirm)) {
         state.profile = {}; state.match = null; store.del(PROFILE_KEY); return go("q", { step: 1 });
       }
@@ -280,6 +336,12 @@
     if (detail) return go("detail", { id: detail.dataset.detail });
     const ask = e.target.closest("[data-ask]");
     if (ask) return go("chat", { programId: ask.dataset.ask });
+    const more = e.target.closest("[data-more]");
+    if (more) return go("moreDetail", { moreId: more.dataset.more });
+    const opener = e.target.closest("[data-open]");
+    if (opener) { state.moreOpen[opener.dataset.open] = true; return screenMore(); }
+    const askMore = e.target.closest("[data-ask-more]");
+    if (askMore) return go("chat", { moreId: askMore.dataset.askMore });
     return undefined;
   });
   app.addEventListener("change", (e) => {   // 나이를 바꾸면 군 복무 질문이 나타나거나 사라진다
@@ -294,7 +356,7 @@
   });
   document.getElementById("brand").addEventListener("click", () => go(state.profile.done ? "results" : "q", { step: 1 }));
 
-  window.Dol = { state, go, api, t, esc, linkify, screens, programById, render };
+  window.Dol = { state, go, api, t, esc, linkify, screens, programById, moreById, render };
 
   (async () => {
     try {

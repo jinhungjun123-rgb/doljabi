@@ -10,6 +10,9 @@
   // 답은 마크다운 굵게(**…**)를 쓴다: 이스케이프한 뒤 <b>로 바꾸고, 짝 없는 ** 는 지운다
   const rich = (s) => esc(s).replace(/\*\*(.+?)\*\*/gs, "<b>$1</b>").replace(/\*\*/g, "").replace(/\n/g, "<br>");
   const ctxProgram = () => (D.state.params.programId ? D.programById(D.state.params.programId) : null);
+  // 일반 지원(공공데이터)에서 왔으면 그 사업 정보를 채팅 맥락(about)으로 함께 보낸다
+  const ctxMore = () => (D.state.params.moreId ? D.moreById(D.state.params.moreId) : null);
+  const ctxItem = () => ctxProgram() || ctxMore();
 
   function bubble(m, i) {
     if (m.role === "user") return `<div class="bub me">${esc(m.content)}</div>`;
@@ -35,15 +38,16 @@
     }).join("") || `<div>${esc(labels.route)} …</div>`}</div>`;
   }
 
-  const freshFromCard = () => ctxProgram() && chat.messages.length === chat.ctxStart;
+  const freshFromCard = () => ctxItem() && chat.messages.length === chat.ctxStart;
 
   function render() {
-    const prog = ctxProgram();
+    const prog = ctxItem();
     if (prog && chat.ctxFor !== D.state.params) {   // 카드에서 새로 들어옴: 그 시점부터 추천 질문과 사업명 붙이기
       chat.ctxFor = D.state.params;
       chat.ctxStart = chat.messages.length;
     }
-    const suggestions = freshFromCard() ? c().suggest(prog.name) : chat.messages.length || prog ? [] : c().starters;
+    const suggest = ctxMore() ? c().suggestMore : c().suggest;
+    const suggestions = freshFromCard() ? suggest(prog.name) : chat.messages.length || prog ? [] : c().starters;
     app.innerHTML = `<h1>${esc(c().title)}</h1>
       ${prog ? `<div class="ctx">${esc(c().fromCard(prog.name))}</div>` : ""}
       <div class="msgs">${chat.messages.length ? "" : `<div class="bub bot">${esc(c().hello)}</div>`}
@@ -58,8 +62,9 @@
   async function send(question) {
     question = question.trim();
     if (!question || chat.pending) return;
-    const prog = ctxProgram();
+    const prog = ctxItem(), item = ctxMore();
     const asked = freshFromCard() && !question.includes(prog.name) ? c().about(prog.name) + question : question;
+    const about = item ? { about: { name: item.name, org: item.org, summary: item.summary, link: item.link } } : {};
     const history = chat.messages.filter((m) => !m.error).slice(-6).map((m) => ({ role: m.role, content: m.content }));
     chat.messages.push({ role: "user", content: question });
     chat.lastQuestion = question;
@@ -69,7 +74,7 @@
     let answered = false;
     try {
       const r = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ question: asked, history, profile }) });
+        body: JSON.stringify({ question: asked, history, profile, ...about }) });
       if (!r.ok || !r.body) throw new Error(`chat ${r.status}`);
       const reader = r.body.getReader();
       const dec = new TextDecoder();
