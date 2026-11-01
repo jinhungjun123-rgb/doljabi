@@ -7,6 +7,8 @@
   D.state.chat = chat;
   const c = () => D.t().chat;
   const esc = D.esc;
+  // 답은 마크다운 굵게(**…**)를 쓴다: 이스케이프한 뒤 <b>로 바꾸고, 짝 없는 ** 는 지운다
+  const rich = (s) => esc(s).replace(/\*\*(.+?)\*\*/gs, "<b>$1</b>").replace(/\*\*/g, "").replace(/\n/g, "<br>");
   const ctxProgram = () => (D.state.params.programId ? D.programById(D.state.params.programId) : null);
 
   function bubble(m, i) {
@@ -20,7 +22,7 @@
     const chips = (m.chips || []).map((ch, j) => `<button type="button" class="src" data-src="${i}-${j}">📘 ${esc(ch.label)}</button>
       ${ch.open && ch.text ? `<div class="srctext">${esc(ch.text)}</div>` : ""}`).join("");
     const web = (m.web || []).map((u) => `<a class="src web" href="${esc(u)}" target="_blank" rel="noopener">${esc(c().web)}</a>`).join("");
-    return `<div class="bub bot">${esc(m.content).replace(/\n/g, "<br>")}
+    return `<div class="bub bot">${rich(m.content)}
       ${chips || web ? `<div class="srcs">${chips}${web}</div>` : ""}<div class="disc">${esc(c().disclaimer)}</div></div>`;
   }
 
