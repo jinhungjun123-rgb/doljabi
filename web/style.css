@@ -120,4 +120,4 @@ dd { margin: 4px 0 0; font-size: 15px; white-space: pre-line; word-break: keep-a
 /* 일반 지원 (공공데이터 자동 확인): 검수한 지원의 "법령 확인" 배지와 구분 */
 .tag.auto { background: #f1ecff; color: #5b4bb2; }
 .tag.src { background: #f3f3f3; color: #555; }
-.btn.small.wide { display: block; width: 100%; margin: 0 0 10px; }
+h3 { font-size: 14px; margin: 14px 0 6px; color: var(--main-dark); }

@@ -48,3 +48,9 @@ def test_data_quality():
     assert not [i for i in d if i.get("age") == [0, 99]]                                                    # "나이 0세 이상"은 나이 제한 없음
     housing = re.compile(r"주거|주택|월세|전세|임대|기숙|거주|보금자리|원룸|셰어|하우스|숙소|이사|청약|보증금|입주|빌리지|공공분양|모기지|학사관|전입")
     assert not [i["name"] for i in d if i["group"] == "housing" and not housing.search(i["name"] + i["summary"])]
+
+
+def test_system_building_is_not_support():
+    import re
+    d = json.loads(MORE.read_text(encoding="utf-8"))["items"]
+    assert not [i["name"] for i in d if re.search(r"시스템 구축|DB\s?고도화|포인트제 도입", i["name"])]

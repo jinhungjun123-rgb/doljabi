@@ -104,8 +104,9 @@ def test_more_endpoint():
     c = TestClient(create_app(bot_factory=FakeBot))
     r = c.post("/api/more", json={"profile": {"age": 20, "region": "충북"}})
     assert r.status_code == 200
-    groups = r.json()["groups"]
-    assert groups and all("status" in i and "conditions" in i for g in groups for i in g["items"])
+    out = r.json()
+    items = out["ok"] + [i for g in out["maybe"] for i in g["items"]]
+    assert items and all("status" in i and "conditions" in i for i in items)
     bad = c.post("/api/more", content="질문".encode("cp949"), headers={"content-type": "application/json"})
     assert bad.status_code == 400
 

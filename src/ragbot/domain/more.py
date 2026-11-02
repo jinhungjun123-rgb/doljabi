@@ -21,6 +21,8 @@ ORG_SIDO = {"서울특별시": "11", "부산광역시": "26", "대구광역시":
             "울산광역시": "31", "세종특별자치시": "36", "경기도": "41", "강원특별자치도": "51", "강원도": "51", "충청북도": "43",
             "충청남도": "44", "전북특별자치도": "52", "전라북도": "52", "전라남도": "12", "전남광주통합특별시": "12", "경상북도": "47",
             "경상남도": "48", "제주특별자치도": "50"}
+# 이름에 든 시·도 (전국으로 올라왔어도 그 지역 사업). 긴 이름부터
+NAME_SIDO = re.compile("|".join(sorted([*ORG_SIDO, *SIDO_CODE], key=len, reverse=True)))
 # 이 조건 중 하나는 맞아야 "받을 수 있어 보여요" (신청 기간만 맞는 카드는 사용자에 대해 확인한 것이 없다)
 ABOUT_USER = {"age", "region", "income", "job", "school", "target", "special"}
 SIDO_NAME = {"12": "광주·전남", **{code: name for name, code in SIDO_CODE.items() if code != "12"}}
@@ -33,9 +35,9 @@ USER_JOB = {"working": {"0013001"}, "rest_6m_plus": {"0013003"}, "rest_under_6m"
 USER_SCHOOL = {"middle_high": {"0049002"}, "college": {"0049005"}}
 INCOME_BAND = {"none": (0, 0), "lt100": (0, 99), "100_200": (100, 199), "200_256": (200, 256), "gt256": (257, None)}  # 월, 만원
 LIFE_AGES = {"청소년": (13, 18), "청년": (19, 34)}
-CARE_WORDS = re.compile(r"돌봄|가족|간병|장애|자립")
+CARE_WORDS = re.compile(r"돌봄|간병|영케어러")   # 가족을 돌보는 사람과 관련된 사업을 먼저
 # 이름에만 대상이 드러나는 사업 (특화 대상 코드가 비어 있어도)
-TARGET_WORDS = re.compile(r"자립준비|보호종료|퇴소|장애|한부모|농업인|귀농|귀어|어업인|예술인|영유아|임산부|다문화|북한이탈|탈북|장병|군인|보훈|소상공인")
+TARGET_WORDS = re.compile(r"자립준비|보호종료|퇴소|장애|한부모|농업인|귀농|귀어|어업인|청년농|영농|스마트팜|농촌형|예술인|영유아|임산부|다문화|북한이탈|탈북|장병|군인|보훈|소상공인|피해자|의사상자|입양|위탁|자활|양육|출산|결혼|농지|특수학교|특수교육|첫만남|아이돌봄")
 _ORDER = {"ok": 0, "check": 1, "no": 2}
 
 
@@ -72,8 +74,14 @@ def _region_row(item: dict, profile: dict) -> dict | None | bool:
     code = SIDO_CODE.get(profile.get("region"))
     if item["scope"] == "nation":
         office = ORG_SIDO.get(item["org"].split(" ")[0])
-        if office is None:                     # 중앙부처·공공기관: 전국
-            return None
+        if office is None:                     # 중앙부처·공공기관: 전국. 단 이름에 시·도가 있으면 그 지역 사업
+            named = NAME_SIDO.search(item["name"])
+            if not named:
+                return None
+            place = SIDO_CODE.get(named.group(0)) or ORG_SIDO[named.group(0)]
+            if code is None:
+                return _row("region", f"사는 곳: {named.group(0)} (원문 확인)", "unknown")
+            return _row("region", f"사는 곳: {SIDO_NAME[code]}", "ok") if code == place else False
         if code != office:
             return False
         return _district_row(item, profile) or _row("region", f"사는 곳: {SIDO_NAME[code]}", "ok")
@@ -184,22 +192,54 @@ def judge(item: dict, profile: dict, today: str) -> dict | None:
     return {**shown, "local": local, "status": status, "conditions": conditions}
 
 
-def _sort_key(r: dict) -> tuple:
-    care = bool(CARE_WORDS.search(r["name"] + r["summary"]))
-    return _ORDER[r["status"]], not care, not r["local"], r["name"]
+MAYBE_PER_GROUP = 3        # 확인해 볼 만한 지원: 분야마다 이만큼만 (나머지는 온통청년·복지로에서)
+FOR_OTHERS = {"special", "married"}   # 이 조건을 모르면 대개 다른 사람을 위한 사업 (자립준비청년, 농업인, 기혼 …)
+
+
+def _unknown(r: dict) -> set:
+    return {c["key"] for c in r["conditions"] if c["result"] == "unknown"}
+
+
+def _care(r: dict) -> bool:
+    return bool(CARE_WORDS.search(r["name"] + r["summary"]))
+
+
+def _maybe_key(r: dict) -> tuple:
+    """돌봄·가족 관련 → 내 지역 → 모르는 조건이 적은 것 → 지금 신청할 수 있는 것 → 이름."""
+    open_now = any(c["key"] == "period" and c["result"] == "ok" for c in r["conditions"])
+    return not _care(r), not r["local"], len(_unknown(r)), not open_now, r["name"]
 
 
 def more_for(profile: dict, data: dict, today: str) -> dict:
-    """분야별 목록: items 는 받을 수 있어 보여요 → 확인이 필요해요, no_items 는 어려워 보여요."""
+    """짧은 목록: ok 는 받을 수 있어 보여요 전부, maybe 는 분야마다 확인해 볼 만한 지원 몇 개. 어려워 보여요는 보내지 않는다."""
     profile = clean_profile(profile)
     judged = [r for r in (judge(i, profile, today) for i in data["items"]) if r]
-    groups = []
+    seen = set()
+
+    def first_time(r: dict) -> bool:          # 해마다 다시 올라온 같은 사업 ("2026 …")은 한 번만
+        name = re.sub(r"^20\d\d\s*|\s+", "", r["name"])
+        if name in seen:
+            return False
+        seen.add(name)
+        return True
+
+    ok = [r for r in sorted((r for r in judged if r["status"] == "ok"), key=lambda r: (not _care(r), not r["local"], r["name"]))
+          if first_time(r)]
+    for r in ok:
+        r["group_label"] = GROUP_LABELS[r["group"]]
+    maybe = []
     for key, label in GROUP_LABELS.items():
-        mine = sorted((r for r in judged if r["group"] == key), key=_sort_key)
-        if mine:
-            groups.append({"key": key, "label": label, "items": [r for r in mine if r["status"] != "no"],
-                           "no_items": [r for r in mine if r["status"] == "no"]})
-    return {"as_of": data["as_of"], "groups": groups}
+        mine = sorted((r for r in judged if r["group"] == key and r["status"] == "check" and not _unknown(r) & FOR_OTHERS),
+                      key=_maybe_key)
+        picked = []
+        for r in mine:
+            if len(picked) == MAYBE_PER_GROUP:
+                break
+            if first_time(r):
+                picked.append(r)
+        if picked:
+            maybe.append({"key": key, "label": label, "items": picked})
+    return {"as_of": data["as_of"], "ok": ok, "maybe": maybe}
 
 
 def about_summary(about, data: dict) -> str | None:

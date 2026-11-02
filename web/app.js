@@ -194,37 +194,34 @@
 
   // ---------------------------------------------------------------- 일반 지원 (공공데이터, 자동 확인)
   const ICON = { ok: "✅", unknown: "❔", no: "❌" };
-  const SHOWN_PER_GROUP = 4;
   async function loadMore() {
     const key = JSON.stringify(state.profile);
     if (!state.more || state.moreFor !== key) {
       state.more = await api("/api/more", { profile: state.profile });
       state.moreFor = key;
-      state.moreOpen = {};
     }
     return state.more;
   }
-  const moreById = (id) => state.more?.groups.flatMap((g) => [...g.items, ...g.no_items]).find((i) => i.id === id);
+  const moreById = (id) => state.more && [...state.more.ok, ...state.more.maybe.flatMap((g) => g.items)].find((i) => i.id === id);
   function moreMeta(i) {
     const m = t().more;
     return `<span class="tag auto">${esc(m.badge)}</span>${statusPill(i.status)}<span class="tag src">${esc(m.source[i.source])}</span>`;
   }
 
   async function screenMore() {
-    const m = t().more, data = await loadMore(), open = state.moreOpen;
+    // 받을 수 있어 보여요는 모두, 확인해 볼 만한 지원은 분야마다 몇 개만 (나머지는 온통청년·복지로에서 찾아보기)
+    const m = t().more, data = await loadMore();
     const card = (i) => `<button type="button" class="card" data-more="${esc(i.id)}"><span class="meta">${moreMeta(i)}</span>
       <span class="name">${esc(i.name)}</span><span class="desc">${esc(i.summary)}</span></button>`;
-    const group = (g) => {
-      const all = open[g.key] ? g.items : g.items.slice(0, SHOWN_PER_GROUP);
-      const rest = g.items.length - all.length;
-      const no = g.no_items.length ? (open[`${g.key}:no`] ? g.no_items.map(card).join("")
-        : `<button type="button" class="linkbtn" data-open="${g.key}:no">${esc(m.showNo(g.no_items.length))}</button>`) : "";
-      return `<h2>${esc(g.label)}</h2>${all.map(card).join("")}
-        ${rest > 0 ? `<button type="button" class="btn ghost small wide" data-open="${g.key}">${esc(m.showMore(rest))}</button>` : ""}${no}`;
-    };
+    const ok = data.ok.length ? `<h2>${esc(m.okTitle(data.ok.length))}</h2>${data.ok.map(card).join("")}`
+      : `<div class="card guide">${esc(m.noOk)}<div class="links"><button type="button" class="linkbtn" data-go="start">${esc(m.edit)}</button></div></div>`;
+    const maybe = data.maybe.length ? `<h2>${esc(m.maybeTitle)}</h2><p class="note">${esc(m.maybeSub)}</p>
+      ${data.maybe.map((g) => `<h3>${esc(g.label)}</h3>${g.items.map(card).join("")}`).join("")}` : "";
     app.innerHTML = `<button type="button" class="back" data-go="results">${esc(t().detail.back)}</button>
       <h1>${esc(m.title)}</h1><p class="sub">${esc(m.intro(data.as_of))}</p>
-      ${data.groups.length ? data.groups.map(group).join("") : `<p class="sub">${esc(m.empty)}</p>`}
+      ${ok}${maybe}
+      <div class="card guide">${esc(m.findMore)}<div class="links"><a href="${LINKS.youthCenter}" target="_blank" rel="noopener">온통청년</a>
+        <a href="${LINKS.bokjiro}" target="_blank" rel="noopener">복지로</a></div></div>
       <p class="foot">${esc(t().results.foot)}</p>`;
   }
 
@@ -338,8 +335,6 @@
     if (ask) return go("chat", { programId: ask.dataset.ask });
     const more = e.target.closest("[data-more]");
     if (more) return go("moreDetail", { moreId: more.dataset.more });
-    const opener = e.target.closest("[data-open]");
-    if (opener) { state.moreOpen[opener.dataset.open] = true; return screenMore(); }
     const askMore = e.target.closest("[data-ask-more]");
     if (askMore) return go("chat", { moreId: askMore.dataset.askMore });
     return undefined;
