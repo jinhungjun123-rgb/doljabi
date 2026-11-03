@@ -225,3 +225,15 @@ def test_short_list_has_no_repeated_names():
         out = more_for(profile, load_more(), TODAY)
         names = [re.sub(r"^20\d\d\s*|\s+", "", i["name"]) for i in out["ok"] + [i for g in out["maybe"] for i in g["items"]]]
         assert len(names) == len(set(names))
+
+
+def test_basic_livelihood_answer_opens_programs_for_recipients():
+    # 5단계 "기초생활 수급자나 차상위" 답을 쓴다. 코드는 수급자만 뜻하므로 차상위는 원문 확인이라고 알린다
+    item = youth(special=["0014003"], extra=True)
+    yes = judge(item, {**ME, "basic_livelihood": "yes"}, TODAY)
+    row = next(c for c in yes["conditions"] if c["key"] == "special")
+    assert row["result"] == "ok" and "차상위는 원문 확인" in row["label"]
+    data = {"as_of": "2026-11-01", "items": [item]}
+    shown = lambda p: [i["id"] for g in more_for(p, data, TODAY)["maybe"] for i in g["items"]]
+    assert shown({**ME, "basic_livelihood": "yes"}) == ["Y:1"]
+    assert shown({**ME, "basic_livelihood": "no"}) == []

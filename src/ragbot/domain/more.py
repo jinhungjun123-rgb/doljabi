@@ -162,8 +162,8 @@ def _restriction_rows(item: dict, profile: dict) -> list[dict]:
     special = item.get("special") or []
     if special:
         names = "·".join(dict.fromkeys(SPECIAL_NAME.get(c, "그 밖의 특정 대상") for c in special))
-        ok = "0014003" in special and profile.get("basic_livelihood") == "yes"
-        out.append(_row("special", f"특정 대상: {names}", "ok" if ok else "unknown"))
+        ok = "0014003" in special and profile.get("basic_livelihood") == "yes"   # 답은 수급·차상위, 코드는 수급자만
+        out.append(_row("special", f"특정 대상: {names}" + (" (차상위는 원문 확인)" if ok else ""), "ok" if ok else "unknown"))
     elif TARGET_WORDS.search(item["name"]):
         out.append(_row("special", f"특정 대상일 수 있음: {TARGET_WORDS.search(item['name']).group(0)}", "unknown"))
     if item.get("married"):
