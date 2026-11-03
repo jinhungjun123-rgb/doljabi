@@ -175,7 +175,7 @@
         <button type="button" class="linkbtn" data-go="start">${esc(r.edit)}</button>
         <button type="button" class="linkbtn" data-go="clear">${esc(r.clear)}</button></div>
       <h1>${esc(count("ok") ? r.titleN(count("ok")) : r.title)}</h1>
-      <p class="sub">${esc(r.lead(count("check")))}</p>
+      ${count("check") ? `<p class="sub">${esc(r.lead(count("check")))}</p>` : ""}
       ${centerBlock(state.match.center)}
       ${section("national")}${section("linked")}${section("local")}
       <button type="button" class="card more" data-go="more"><span class="main"><span class="name">${esc(r.more)}</span>
