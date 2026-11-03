@@ -26,3 +26,14 @@ def test_default_rules_follow_headings():
     secs = build_sections(doc)
     assert [s.path for s in secs] == [["(front matter)"], ["Returns", "Deadline"]]
     assert secs[1].text == "30 days"
+
+
+def test_nested_list_items_are_kept():
+    """kordoc puts sub-items of a list in "children"; they hold the actual conditions and must reach the index."""
+    doc = {"source": "x.pdf", "lang": "en", "warnings": [], "blocks": [
+        {"type": "heading", "level": 1, "text": "Rules", "pageNumber": 1},
+        {"type": "list", "text": "1. Members", "pageNumber": 1, "children": [
+            {"type": "list", "text": "a. live here", "pageNumber": 1, "children": [
+                {"type": "list", "text": "i. since 2020", "pageNumber": 2}]},
+            {"type": "list", "text": "b. pay fees", "pageNumber": 2}]}]}
+    assert build_sections(doc)[0].text == "- 1. Members\n  - a. live here\n    - i. since 2020\n  - b. pay fees"

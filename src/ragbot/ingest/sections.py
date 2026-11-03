@@ -56,6 +56,17 @@ def _is_ocr(block: dict) -> bool:
     return (block.get("style") or {}).get("fontName") == "ocr" or (block["type"] == "table" and "bbox" not in block)
 
 
+def _list_children(block: dict, depth: int = 1) -> list[str]:
+    """Sub-items of a list block (kordoc "children"), indented two spaces per level."""
+    out = []
+    for child in block.get("children") or []:
+        text = clean(child.get("text", ""))
+        if text:
+            out.append(f"{'  ' * depth}- {text}")
+        out.extend(_list_children(child, depth + 1))
+    return out
+
+
 def build_sections(doc: dict, rules: SectionRules | None = None) -> list[Section]:
     """doc: one parsed file from data/parsed/*.json"""
     rules = rules or SectionRules()
@@ -100,6 +111,8 @@ def build_sections(doc: dict, rules: SectionRules | None = None) -> list[Section
             if not lines:
                 start_page = page
             lines.append(f"- {text}" if kind == "list" else text)
+            if kind == "list":
+                lines.extend(_list_children(b))
             low = low or is_low
     flush()
     return sections

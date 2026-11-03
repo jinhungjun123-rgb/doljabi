@@ -1,6 +1,7 @@
 """Generic tools. Their descriptions come from config.yaml (documents.*, web.official_domains), not from code."""
 import ast
 import operator
+import re
 from datetime import date
 
 from ragbot import web
@@ -31,7 +32,11 @@ def _documents_parameters(cfg: dict) -> dict:
 def search_documents(ctx: Context, query: str, lang: str | None = None):
     label = ctx.cfg["documents"]["citation"]
     hits = ctx.index.retrieve(query, ctx.cfg["retrieval"], lang)
-    return [{"source": f"{label} {c.lang} p.{c.page}", "section": " > ".join(c.path), "text": c.text.split("\n", 1)[-1],
+    # documents.notes: how to read a passage the model tends to misread, attached wherever that passage is retrieved
+    notes = [(re.compile(n["match"]), n["note"]) for n in ctx.cfg["documents"].get("notes") or []]
+    return [{"source": f"{label} {c.lang} p.{c.page}", "section": " > ".join(c.path),   # note before text: read first
+             **({"note": " ".join(n for p, n in notes if p.search(c.text))} if any(p.search(c.text) for p, _ in notes) else {}),
+             "text": c.text.split("\n", 1)[-1],
              **({"warning": "OCR text from an image page; may contain recognition errors"} if c.low_confidence else {})}
             for c, _ in hits]
 

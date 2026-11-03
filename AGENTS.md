@@ -112,7 +112,8 @@ index → tools → router → agent → evaluate → cli/app`. 모듈은 자기
 | `python -m ragbot …` 가 "TODO 챗봇 이름" 설정이나 0 chunks 로 돈다 | `python -c "import ragbot; print(ragbot.__file__)"` | 다른 폴더의 템플릿이 import 됨 → `PYTHONPATH=src` |
 | 결과 카드 상태가 법령과 다름 | `src/ragbot/domain/eligibility.py` 의 `RULES`, `tests/test_eligibility.py` | 조건 함수의 ok/unknown/no 분기; LLM 탓이 아님 |
 | 화면에 "data/docs", "시트" 같은 내부 문구 | `scripts/build_programs.py` 의 `USER_WORDING` | 검수 파일의 표현이 그대로 넘어옴 (`test_no_review_file_wording_reaches_users`) |
-| 채팅이 조문을 인용하고도 결론이 틀림 (예: 병역 가산) | trace 의 마지막 메시지와 `search_documents` 결과 | 검색은 맞음 → 답 생성; 시스템 프롬프트의 단서·예외 규칙 (`docs/decisions/0007`) |
+| 채팅이 조문을 인용하고도 결론이 틀림 (예: 병역 가산) | trace 의 마지막 메시지와 `search_documents` 결과 (`note`) | 검색은 맞음 → 그 문단에 읽는 법 `config.yaml → documents.notes` (`docs/decisions/0011`). 프롬프트 규칙은 다른 문항을 떨어뜨림 (0007) |
+| 원문에 있는 목·호가 검색되지 않음 | `index/chunks.json` 에서 그 문장 찾기 | 목록의 하위 항목(`children`)이 빠짐 → `ingest/sections.py`, 색인 다시 만들기 |
 | 채팅 요청이 500 | 서버 로그 | 요청 본문이 UTF-8 JSON이 아님 (Windows curl) → 400 으로 처리됨 |
 
 ## 에이전트가 틀리기 쉬운 데이터 사실 (자세히: docs/DATA.md)
