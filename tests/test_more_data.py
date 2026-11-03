@@ -74,7 +74,7 @@ def test_programs_for_schools_are_not_for_students():
                 "대학별 맞춤형 취업역량강화 프로그램 지원", "체계적인 지식재산 인재 및 리더양성", "지역산업 연계형 대학 특성화학과 혁신지원",
                 "첨단분야(이차전지) 혁신융합대학", "산학일체형 도제학교 지원", "건강증진대학만들기", "대학-공공기관 연계 취업지원 프로그램"):
         assert names[via].get("via_school") is True, via
-    for own in ("이공계 우수학생 국가장학금", "청년 자금지원을 위한 햇살론유스 운영", "제11기 충북청년도정참여단",
+    for own in ("이공계 우수학생 국가장학금", "청년 자금지원을 위한 햇살론유스 운영", "청년층 학자금 대출자 상환부담 완화",
                 "대학생 연합생활관(은행권,고양)"):
         assert not names[own].get("via_school"), own
 
@@ -85,4 +85,16 @@ def test_policy_admin_is_not_support():
     names = {i["name"] for i in d}
     for gone in ("부산 청년정책 홍보", "부산시 청년정책 책임관제 운영", "부산 청년친화도시 지정 지원", "공공기관 청년고용의무제 운영"):
         assert gone not in names, gone
-    assert "청년정책협의체 운영지원" in names          # 청년이 위원으로 참여한다
+
+
+def test_events_and_policy_participation_are_not_practical_help():
+    # 대회·축제·행사·서포터즈·정책 참여(위원회·참여단·정책제안)는 돈·서비스·교육·일자리를 주지 않는다 (결정 0010)
+    d = json.loads(MORE.read_text(encoding="utf-8"))["items"]
+    names = {i["name"] for i in d}
+    for gone in ("전국대학무용경연대회", "충북 청년 축제", "울산 비보이 페스티벌", "구미시 청년의 날 행사", "청년정책 서포터즈",
+                 "제11기 충북청년도정참여단", "충북인재 정책제안 지원사업", "광주청년위원회(제11기)", "청년정책협의체 운영지원",
+                 "기업초청 토크콘서트", "모두의 AI 경진대회", "부산 유라시아 도시외교단 추진", "청년 중심 마약류 중독예방 교육활동 지원", "2026년 인천 청년정책네트워크 위원 모집"):
+        assert gone not in names, gone
+    for kept in ("충청북도 취업박람회", "청년동아리 활동비 지원사업", "KF 한중청년교류 방중 파견사업", "거리공연 지원사업",
+                 "서울형 청년인턴 직무캠프", "WFK 청년중기봉사단", "제주시 취업준비 청년 국내기업 견학프로그램 행사 운영", "청년 창업아카데미 운영"):
+        assert kept in names, kept
