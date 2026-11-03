@@ -133,3 +133,10 @@ def test_more_is_compressed():
 def test_backup_deploy_ships_the_app_data():
     script = (Path(__file__).resolve().parents[1] / "scripts" / "deploy_hf.sh").read_text(encoding="utf-8")
     assert "data/programs/more.json" in script
+
+
+def test_one_tag_with_several_sources_becomes_several_chips():
+    # 모델이 [Source: a; b] 처럼 한 태그에 둘을 쓰면 내부 표기("gov ko p.1")가 칩 이름에 보였다
+    from app.api import present
+    ans = Answer(answer="답 [Source: gov ko p.3, 위기아동청년법 제13조; gov ko p.1, 위기아동청년법 시행규칙 제6조②]", tool_calls=[])
+    assert [c["label"] for c in present(ans)["chips"]] == ["위기아동청년법 제13조", "위기아동청년법 시행규칙 제6조②"]

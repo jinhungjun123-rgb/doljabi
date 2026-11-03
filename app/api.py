@@ -74,7 +74,8 @@ def _chip(label: str, passages: list[dict]) -> dict:
 def present(ans) -> dict:
     """Answer text without [Source: …] tags, plus document chips and web URLs taken from those tags."""
     chips, web = [], []
-    for tag in CITATION.findall(ans.answer):
+    tags = [t for found in CITATION.findall(ans.answer) for t in found.split(";")]   # [Source: a; b] 도 둘로
+    for tag in tags:
         tag = tag.strip()
         if tag.startswith("web"):
             url = tag[3:].strip(" :,")
