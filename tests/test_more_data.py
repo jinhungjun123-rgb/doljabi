@@ -34,8 +34,14 @@ def test_youth_restriction_fields_and_zero_age():
     d = json.loads(MORE.read_text(encoding="utf-8"))
     youth = [i for i in d["items"] if i["source"] == "youth"]
     assert all({"special", "married", "extra"} <= i.keys() for i in youth)
-    infants = next(i for i in youth if i["name"].startswith("가정양육수당"))
-    assert infants["age"] == [0, 0]                  # 나이 제한 Y, 0~0세: 제한 없음이 아니다
+    # 나이 제한 Y, 0~0세 = 범위가 글로만 적힘: 글에서 읽고, 글에도 없으면 나이 칸 없음(청년정책 기본)으로 (결정 0010)
+    age = {i["name"]: i["age"] for i in youth}
+    assert age["경산시 청년센터"] == [15, 39] and age["문경시청년센터 운영"] == [19, 45]
+    for other in ("아픈아이 돌봄센터", "충북 다자녀 행복카드", "청년과 어르신 주거공유"):   # 아동·자녀·어르신 나이는 신청자 나이가 아님
+        assert next(a for n, a in age.items() if n.startswith(other)) is None, other
+    assert next(a for n, a in age.items() if n.startswith("ICT이노베이션스퀘어")) == [18, 99]
+    assert next(a for n, a in age.items() if n.startswith("고용평등 심층상담")) is None
+    assert not [i["name"] for i in youth if i["age"] == [0, 0]]
 
 
 def test_data_quality():

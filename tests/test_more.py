@@ -102,7 +102,7 @@ def test_more_for_is_a_short_list():
     assert all(len(g["items"]) <= 3 and g["label"] == GROUP_LABELS[g["key"]] for g in out["maybe"])
     assert all(i["status"] == "check" for i in maybe)
     assert not [i for i in maybe if any(c["key"] in ("special", "married") and c["result"] == "unknown" for c in i["conditions"])]
-    assert len(out["ok"]) + len(maybe) <= 40
+    assert len(maybe) <= 18          # 받을 수 있어 보여요는 모두 보여 주므로 전체 상한은 두지 않는다
 
 
 def test_short_list_without_any_ok():

@@ -60,6 +60,34 @@ def periods(p: dict) -> dict:
     return {"kind": "range", "ranges": [list(r) for r in ranges]}
 
 
+AGE_RANGE = re.compile(r"(\d{1,2})\s*세?\s*[~∼～-]\s*(?:만\s*)?(\d{1,2})\s*세")
+AGE_MIN = re.compile(r"(\d{1,2})\s*세\s*이상")
+AGE_MAX = re.compile(r"(\d{1,2})\s*세\s*이하")
+TARGET_PART = re.compile(r"대상\s*\)?\s*[:：]?\s*([^ㅇ○\n]{0,80})")
+OTHER_PERSON = re.compile(r"아동|자녀|아이|영유아|어르신|노인|어린이|초등")   # 신청자가 아닌 사람의 나이 ("12세 이하 아동")
+
+
+def text_age(p: dict) -> list[int] | None:
+    """나이 제한 Y, 0~0세인 정책: 대상 글(추가 자격, 지원 내용의 "(대상) …")에서 신청자 나이 범위를 읽는다. 없으면 None."""
+    def own(text: str, m) -> bool:
+        return not OTHER_PERSON.search(text[max(0, m.start() - 12):m.end() + 8])
+
+    texts = [p.get("addAplyQlfcCndCn") or ""] + TARGET_PART.findall(p.get("plcySprtCn") or "")
+    for text in texts:
+        m = next((m for m in AGE_RANGE.finditer(text) if own(text, m) and int(m.group(1)) <= int(m.group(2))), None)
+        lo_m = next((m for m in AGE_MIN.finditer(text) if own(text, m)), None)
+        hi_m = next((m for m in AGE_MAX.finditer(text) if own(text, m)), None)
+        if m:
+            age = [int(m.group(1)), int(m.group(2))]
+        elif lo_m or hi_m:
+            age = [int(lo_m.group(1)) if lo_m else 0, int(hi_m.group(1)) if hi_m else 99]
+        else:
+            continue
+        if age[1] >= 13 and age[0] <= 39:       # 청년 나이대와 겹치지 않으면 다른 사람 이야기로 보고 버린다
+            return age
+    return None
+
+
 def number(value) -> int | None:
     try:
         return int(str(value).strip())
@@ -90,7 +118,9 @@ def youth_items(policies: list[dict], reviewed: set[str]) -> list[dict]:
         age = None
         if p.get("sprtTrgtAgeLmtYn") == "Y" and (lo is not None or hi is not None):
             lo = lo or 0
-            age = [lo, 99 if hi is None or (hi == 0 and lo > 0) else hi]   # 0~0세는 그대로 (범위가 글로만 적힘)
+            age = [lo, 99 if hi is None or (hi == 0 and lo > 0) else hi]
+            if age == [0, 0]:
+                age = text_age(p)                                         # 범위가 글로만 적힘: 글에서 읽고, 없으면 나이 칸 없음
             if age == [0, 99]:
                 age = None                                                # 사실상 나이 제한 없음
         income = None

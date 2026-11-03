@@ -195,8 +195,7 @@
       ? `<a class="btn" href="tel:${esc(center.phone)}">${ico("phone")}${esc(center.name)} ${esc(center.phone)}</a>`
       : `<a class="btn" href="tel:129">${ico("phone")}${esc(d.call129)}</a>`;
     const field = (label, value) => (value ? `<dt>${esc(label)}</dt><dd>${linkify(value)}</dd>` : "");
-    app.innerHTML = `<button type="button" class="back" data-go="results">${ico("back")}${esc(d.back)}</button>
-      <div class="meta"><span>${esc(kickerFor(prog))}</span>${prog.closed ? `<span class="tag closed">${esc(t().results.closed)}</span>` : ""}</div>
+    app.innerHTML = `<div class="meta"><span>${esc(kickerFor(prog))}</span>${prog.closed ? `<span class="tag closed">${esc(t().results.closed)}</span>` : ""}</div>
       <h1>${esc(prog.name)}</h1><p class="sub">${esc(prog.summary)}</p>
       ${card ? `<div class="statusline">${statusPill(card.status)}</div>` : ""}
       ${conds}
@@ -231,8 +230,7 @@
       : `<div class="guide">${esc(m.noOk)}<div class="links"><button type="button" class="linkbtn" data-go="start">${esc(m.edit)}</button></div></div>`;
     const maybe = data.maybe.length ? `<h2>${esc(m.maybeTitle)}</h2><p class="note">${esc(m.maybeSub)}</p>
       ${data.maybe.map((g) => `<h3>${esc(g.label)}</h3>${g.items.map(card).join("")}`).join("")}` : "";
-    app.innerHTML = `<button type="button" class="back" data-go="results">${ico("back")}${esc(t().detail.back)}</button>
-      <h1>${esc(m.title)}</h1><p class="sub">${esc(m.intro(data.as_of))}</p>
+    app.innerHTML = `<h1>${esc(m.title)}</h1><p class="sub">${esc(m.intro(data.as_of))}</p>
       ${ok}${maybe}
       <div class="guide">${esc(m.findMore)}<div class="links"><a href="${LINKS.youthCenter}" target="_blank" rel="noopener">온통청년</a>
         <a href="${LINKS.bokjiro}" target="_blank" rel="noopener">복지로</a></div></div>
@@ -246,8 +244,7 @@
     if (!i) return go("more");
     const conds = i.conditions.length ? `<h2>${esc(t().detail.conditions)}</h2>${condList(i.conditions)}` : "";
     const link = /^https?:\/\//.test(i.link) ? i.link : LINKS.youthCenter;
-    app.innerHTML = `<button type="button" class="back" data-go="more">${ico("back")}${esc(m.back)}</button>
-      <div class="meta"><span>${esc(m.source[i.source])} · ${esc(m.badge)}</span></div>
+    app.innerHTML = `<div class="meta"><span>${esc(m.source[i.source])} · ${esc(m.badge)}</span></div>
       <h1>${esc(i.name)}</h1><p class="sub">${esc(i.summary)}</p>
       <div class="statusline">${statusPill(i.status)}</div>
       ${conds}<p class="note">${esc(m.rest)}</p>
@@ -284,6 +281,7 @@
 
   function renderChrome() {
     document.getElementById("brandSub").textContent = t().appSub;
+    document.getElementById("hback").hidden = depth === 0;
     const icon = { results: "list", chat: "chat", centers: "pin" };
     document.getElementById("tabs").innerHTML = ["results", "chat", "centers"].map((k) =>
       `<button type="button" data-tab="${k}" class="${TAB_OF[state.screen] === k ? "on" : ""}">${ico(icon[k])}${esc(t().tabs[k])}</button>`).join("");
@@ -300,12 +298,26 @@
         <button type="button" class="btn ghost" data-go="clear">${esc(t().results.clear)}</button>`;
     }
   }
-  function go(screen, params = {}) {
+  // 화면 이동은 브라우저 기록에 남긴다: 휴대폰·브라우저의 뒤로가기와 머리말의 뒤로 버튼이 앱 안에서 이전 화면으로
+  let depth = 0;
+  function show(screen, params) {
     state.screen = screen;
     state.params = params;
     render();
     window.scrollTo(0, 0);
   }
+  function go(screen, params = {}) {
+    depth += 1;
+    try { history.pushState({ screen, params, depth }, ""); } catch { /* 기록을 못 남겨도 이동은 한다 */ }
+    show(screen, params);
+  }
+  window.addEventListener("popstate", (e) => {
+    const s = e.state;
+    if (!s || !screens[s.screen]) return;
+    if (state.screen === "q") readStepInputs();
+    depth = s.depth || 0;
+    show(s.screen, s.params || {});
+  });
 
   app.addEventListener("click", (e) => {
     const chip = e.target.closest("[data-field]");
@@ -344,11 +356,11 @@
     const detail = e.target.closest("[data-detail]");
     if (detail) return go("detail", { id: detail.dataset.detail });
     const ask = e.target.closest("[data-ask]");
-    if (ask) return go("chat", { programId: ask.dataset.ask });
+    if (ask) return go("chat", { programId: ask.dataset.ask, at: Date.now() });
     const more = e.target.closest("[data-more]");
     if (more) return go("moreDetail", { moreId: more.dataset.more });
     const askMore = e.target.closest("[data-ask-more]");
-    if (askMore) return go("chat", { moreId: askMore.dataset.askMore });
+    if (askMore) return go("chat", { moreId: askMore.dataset.askMore, at: Date.now() });
     return undefined;
   });
   app.addEventListener("change", (e) => {   // 나이를 바꾸면 군 복무 질문이 나타나거나 사라진다
@@ -362,6 +374,9 @@
     return go(b.dataset.tab);
   });
   document.getElementById("brand").addEventListener("click", () => go(state.profile.done ? "results" : "q", { step: 1 }));
+  const hback = document.getElementById("hback");
+  hback.innerHTML = ico("back");
+  hback.addEventListener("click", () => history.back());
 
   window.Dol = { state, go, api, t, esc, ico, linkify, screens, programById, moreById, render };
 
@@ -374,6 +389,8 @@
         <a class="btn" href="tel:129">${ico("phone")}129</a>`;
       return;
     }
-    go(state.profile.done ? "results" : "q", { step: 1 });
+    const first = { screen: state.profile.done ? "results" : "q", params: { step: 1 }, depth: 0 };
+    try { history.replaceState(first, ""); } catch { /* 기록 없이 */ }
+    show(first.screen, first.params);
   })();
 })();

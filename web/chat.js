@@ -40,10 +40,14 @@
 
   const freshFromCard = () => ctxItem() && chat.messages.length === chat.ctxStart;
 
+  // 카드의 "물어보기"를 누른 한 번 (뒤로가기로 같은 대화에 돌아오면 같은 값)
+  const ctxKey = (p) => `${p.programId || ""}|${p.moreId || ""}|${p.at || ""}`;
+
   function render() {
     const prog = ctxItem();
-    if (prog && chat.ctxFor !== D.state.params) {   // 카드에서 새로 들어옴: 그 시점부터 추천 질문과 사업명 붙이기
-      chat.ctxFor = D.state.params;
+    if (prog && chat.ctxFor !== ctxKey(D.state.params)) {   // 카드에서 새로 들어옴: 이전 대화 없이 새로 시작
+      chat.ctxFor = ctxKey(D.state.params);
+      if (!chat.pending) { chat.messages = []; chat.lastQuestion = null; }
       chat.ctxStart = chat.messages.length;
     }
     const suggest = ctxMore() ? c().suggestMore : c().suggest;
