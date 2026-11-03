@@ -25,6 +25,7 @@
 - HF Spaces 유지: 준비는 끝났지만 잠들기와 거리 때문에 기각.
 - 화면까지 함수로 서빙: 정적 파일을 CDN 에 두는 편이 빠르고, 저장소 파일이 그대로 노출될 일도 없어 기각.
 
-## 추가 (Python 버전 고정, 2026-11-03)
-Vercel 이 `requires-python = ">=3.11"` 을 보고 Python 3.12 를 고르기 시작했는데, 이전 빌드 캐시의 잠금은 3.11 기준이라
-`pyarrow==26.0.1` 설치에서 빌드가 실패했다 (cp311 wheel 만 있음). `.python-version` 에 `3.11` 을 적어 로컬 개발 환경(3.11)과 맞췄다.
+## 추가 (pyarrow 26.0.1 제외, 2026-11-03)
+배포가 `uv sync` 에서 실패했다: Vercel 은 Python 3.12 로 빌드하는데, 그날 올라온 `pyarrow==26.0.1` (streamlit 이 설치)은 cp311 wheel 만 있었다.
+캐시 없이 다시 빌드해도 같았고, `.python-version` 3.11 고정도 실패해서 되돌렸다. `pyproject.toml → [tool.uv] constraint-dependencies = ["pyarrow!=26.0.1"]`
+로 그 버전만 피한다 (26.0.0 설치). 26.0.1 파일이 다 올라오면 지워도 된다.

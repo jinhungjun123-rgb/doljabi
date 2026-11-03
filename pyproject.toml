@@ -25,3 +25,7 @@ where = ["src"]
 pythonpath = ["src"]
 testpaths = ["tests"]
 markers = ["api: needs the LLM/embedding API (deselect with -m 'not api')", "engine: needs the kordoc Node engine"]
+
+[tool.uv]
+# pyarrow 26.0.1 (2026-11-03) 은 cp311 wheel 만 올라와 Vercel(Python 3.12) 빌드가 실패한다 (docs/decisions/0008). 파일이 다 올라오면 지워도 됨
+constraint-dependencies = ["pyarrow!=26.0.1"]
