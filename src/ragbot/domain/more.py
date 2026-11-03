@@ -166,6 +166,8 @@ def _restriction_rows(item: dict, profile: dict) -> list[dict]:
         out.append(_row("special", f"특정 대상: {names}" + (" (차상위는 원문 확인)" if ok else ""), "ok" if ok else "unknown"))
     elif TARGET_WORDS.search(item["name"]):
         out.append(_row("special", f"특정 대상일 수 있음: {TARGET_WORDS.search(item['name']).group(0)}", "unknown"))
+    if item.get("via_school"):   # 대학이 공모로 선정되는 사업
+        out.append(_row("via_school", "다니는 학교가 이 사업에 선정된 경우에만 (학교에 확인)", "unknown"))
     if item.get("married"):
         out.append(_row("married", "혼인: " + ("기혼" if item["married"] == "0055001" else "미혼"), "unknown"))
     if item.get("extra") or item["source"] == "national":   # 국가 서비스는 자격이 설명 글에만 있다

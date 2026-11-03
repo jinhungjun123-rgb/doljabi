@@ -24,6 +24,12 @@ NATIONAL_THEMES = {"생활지원", "서민금융", "신체건강", "정신건강
 ONLY_FOR_OTHERS = {"보훈대상자", "다문화·탈북민"}
 # 사용자가 신청할 수 없는 행정 업무 (위원회 운영, 조사, 개발사업). "위원 모집"처럼 참여할 수 있는 것은 남긴다
 NOT_SUPPORT = re.compile(r"실태조사|조성사업|개발사업|정비사업|기본계획|시행계획|연구용역|조정위원회|위원회 (구성|운영|설치)|위원회 운영$|청년참여 확대|참여비율|위촉 지정관리|교통서비스 개선|조성$|시스템 구축|DB\s?고도화|포인트제 도입")
+# 대학·연구소가 신청하는 역량 사업 (연구소, 대학원, 대학 지원 체계): 학생이 신청하거나 받는 것이 없다 → 뺀다
+FOR_SCHOOLS = re.compile(r"중점연구소|단과대학|대학원\s?지원|특성화\s?대학원|대학지원체계|RISE|글로컬대학|대학혁신|인재양성체계|공유대학|학과개편|교육혁신센터")
+FOR_SCHOOLS_TEXT = re.compile(r"거점대학|수행대학|중점대학|연구거점")
+# 대학이 공모로 선정되고 그 학교 학생이 받는 사업 → 남기고 "학교가 선정된 경우에만" (via_school)
+VIA_SCHOOL = re.compile(r"중심대학|특성화\s?대학|천원의\s?아침밥|대학일자리|농업계대학|마이스터대|대학별|대학\s?핵심역량|공학인재")
+VIA_SCHOOL_TEXT = re.compile(r"\d+\s*개\s*(교|대학)\S*\s*(공모|선정)|대학을?\s*(공모|선정)|선정\s*대학")
 # 원본의 주거 분류 중 주거와 관계없는 것은 생활·금융으로
 HOUSING_WORDS = re.compile(r"주거|주택|월세|전세|임대|기숙|거주|보금자리|원룸|셰어|하우스|숙소|이사|청약|보증금|입주|빌리지|공공분양|모기지|학사관|전입")
 THEME_GROUP = [("정신건강", "health"), ("신체건강", "health"), ("주거", "housing"), ("일자리", "jobs"), ("교육", "education")]
@@ -105,6 +111,9 @@ def youth_items(policies: list[dict], reviewed: set[str]) -> list[dict]:
         pid = f"Y:{p['plcyNo']}"
         if pid in reviewed or p.get("earnCndSeCd") not in ("0043001", "0043002"):
             continue
+        text = " ".join(p.get(k) or "" for k in ("plcyExplnCn", "plcySprtCn"))
+        if FOR_SCHOOLS.search(p["plcyNm"]) or FOR_SCHOOLS_TEXT.search(text):
+            continue                                  # 학교·연구소가 신청하는 사업
         period = periods(p)
         if period["kind"] == "range" and period["ranges"] and all(end < AS_OF.replace("-", "") for _, end in period["ranges"]):
             continue                                  # 신청이 끝남
@@ -137,6 +146,7 @@ def youth_items(policies: list[dict], reviewed: set[str]) -> list[dict]:
             "special": [c for c in split(p.get("sbizCd")) if c != ANY_SPECIAL],
             "married": p.get("mrgSttsCd") if p.get("mrgSttsCd") in MARRIED else None,
             "extra": not NOTHING.match(re.sub(r"\s+", " ", p.get("addAplyQlfcCndCn") or "").strip() or "-"),
+            "via_school": bool(VIA_SCHOOL.search(p["plcyNm"]) or VIA_SCHOOL_TEXT.search(text)),
         })
     return items
 

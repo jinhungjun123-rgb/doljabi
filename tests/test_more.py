@@ -237,3 +237,11 @@ def test_basic_livelihood_answer_opens_programs_for_recipients():
     shown = lambda p: [i["id"] for g in more_for(p, data, TODAY)["maybe"] for i in g["items"]]
     assert shown({**ME, "basic_livelihood": "yes"}) == ["Y:1"]
     assert shown({**ME, "basic_livelihood": "no"}) == []
+
+
+def test_programs_a_school_applies_for_need_checking():
+    # 대학이 공모로 선정되는 사업 (천원의 아침밥 …): 학생은 다니는 학교가 선정됐는지 확인해야 한다 (결정 0010)
+    item = youth(age=[19, 34], via_school=True)
+    assert rows(item, ME)["via_school"] == "unknown"
+    assert judge(item, ME, TODAY)["status"] == "check"
+    assert "via_school" not in rows(youth(age=[19, 34]), ME)

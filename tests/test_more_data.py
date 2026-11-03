@@ -60,3 +60,18 @@ def test_system_building_is_not_support():
     import re
     d = json.loads(MORE.read_text(encoding="utf-8"))["items"]
     assert not [i["name"] for i in d if re.search(r"시스템 구축|DB\s?고도화|포인트제 도입", i["name"])]
+
+
+def test_programs_for_schools_are_not_for_students():
+    # 대학·연구소의 역량 사업은 빼고, 선정된 학교의 학생이 받는 사업은 via_school (결정 0010)
+    d = json.loads(MORE.read_text(encoding="utf-8"))["items"]
+    names = {i["name"]: i for i in d}
+    for gone in ("AI 단과대학", "이공분야 대학중점연구소 지원사업(에너지)", "에너지기술공유대학(호남권)", "도시재생 전문인력 양성사업",
+                 "스마트시티 혁신인재 육성", "체계적인 지식재산 인재 및 리더양성"):
+        assert gone not in names, gone
+    for via in ("천원의 아침밥", "AI·SW중심대학", "농업계대학 지원", "대학일자리플러스센터 지원", "창의융합형공학인재양성지원",
+                "대학별 맞춤형 취업역량강화 프로그램 지원"):
+        assert names[via].get("via_school") is True, via
+    for own in ("이공계 우수학생 국가장학금", "청년 자금지원을 위한 햇살론유스 운영", "제11기 충북청년도정참여단",
+                "대학생 연합생활관(은행권,고양)"):
+        assert not names[own].get("via_school"), own
