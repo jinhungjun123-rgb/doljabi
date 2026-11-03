@@ -67,11 +67,22 @@ def test_programs_for_schools_are_not_for_students():
     d = json.loads(MORE.read_text(encoding="utf-8"))["items"]
     names = {i["name"]: i for i in d}
     for gone in ("AI 단과대학", "이공분야 대학중점연구소 지원사업(에너지)", "에너지기술공유대학(호남권)", "도시재생 전문인력 양성사업",
-                 "스마트시티 혁신인재 육성", "체계적인 지식재산 인재 및 리더양성"):
+                 "스마트시티 혁신인재 육성", "대학 ICT연구센터 지원", "스포츠산업 융복합대학원 운영", "직업계고-전문대학 교육과정 연계",
+                 "대학 상생협력 강화", "대학생 현장실습 제도개선", "대학기숙사 확충"):
         assert gone not in names, gone
     for via in ("천원의 아침밥", "AI·SW중심대학", "농업계대학 지원", "대학일자리플러스센터 지원", "창의융합형공학인재양성지원",
-                "대학별 맞춤형 취업역량강화 프로그램 지원"):
+                "대학별 맞춤형 취업역량강화 프로그램 지원", "체계적인 지식재산 인재 및 리더양성", "지역산업 연계형 대학 특성화학과 혁신지원",
+                "첨단분야(이차전지) 혁신융합대학", "산학일체형 도제학교 지원", "건강증진대학만들기", "대학-공공기관 연계 취업지원 프로그램"):
         assert names[via].get("via_school") is True, via
     for own in ("이공계 우수학생 국가장학금", "청년 자금지원을 위한 햇살론유스 운영", "제11기 충북청년도정참여단",
                 "대학생 연합생활관(은행권,고양)"):
         assert not names[own].get("via_school"), own
+
+
+def test_policy_admin_is_not_support():
+    # 정책 홍보, 책임관제, 친화도시 지정, 기관의 고용 의무: 청년이 신청하는 것이 아니다
+    d = json.loads(MORE.read_text(encoding="utf-8"))["items"]
+    names = {i["name"] for i in d}
+    for gone in ("부산 청년정책 홍보", "부산시 청년정책 책임관제 운영", "부산 청년친화도시 지정 지원", "공공기관 청년고용의무제 운영"):
+        assert gone not in names, gone
+    assert "청년정책협의체 운영지원" in names          # 청년이 위원으로 참여한다
