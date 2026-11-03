@@ -72,7 +72,7 @@ def test_age_limit_clauses_get_the_military_reading_note():
     hits = [c for c in chunks if "병역의무를 이행한 기간을 가산" in c.text.replace("\n", "") or "병역의무 를 이행한 기간을 가산" in c.text]
     assert len(hits) >= 2
     out = search_documents(Context(index=_FakeIndex(hits), cfg=CFG), "q")
-    assert all("연령 상한" in o.get("note", "") for o in out)
+    assert all("연령 상한" in o.get("note", "") and "시행령 제11조①1" in o["note"] for o in out)
     other = search_documents(Context(index=_FakeIndex([c for c in chunks if "병역" not in c.text]), cfg=CFG), "q")
     assert not any("연령 상한" in o.get("note", "") for o in other)
 
