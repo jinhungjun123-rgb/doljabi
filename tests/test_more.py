@@ -1,4 +1,5 @@
 """일반 지원 자동 판정 (domain/more.py): 공공데이터의 구조화된 조건만으로 ok / unknown / no."""
+from ragbot.domain.eligibility import clean_profile
 from ragbot.domain.more import GROUP_LABELS, judge, load_more, more_for
 
 TODAY = "20261101"
@@ -31,11 +32,15 @@ def test_age_income_job_conditions():
     assert rows(youth(income=[0, 5000]), {**ME, "income_band": "lt100"})["income"] == "ok"
     assert rows(youth(income=[0, 2400]), {**ME, "income_band": "gt256"})["income"] == "unknown"
     assert rows(youth(income=[0, 2000]), {**ME, "income_band": "100_200"})["income"] == "unknown"
-    assert rows(youth(jobs=["0013003"]), {**ME, "activity": "working"})["job"] == "no"
-    assert rows(youth(jobs=["0013003"]), {**ME, "activity": "rest_6m_plus"})["job"] == "ok"
-    assert rows(youth(jobs=["0013003"]), {**ME, "activity": "college"})["job"] == "unknown"
-    assert "job" not in rows(youth(), {**ME, "activity": "working"})
-    assert rows(youth(schools=["0049005"]), {**ME, "activity": "college"})["school"] == "ok"
+    assert rows(youth(jobs=["0013003"]), {**ME, "work": "working"})["job"] == "no"
+    assert rows(youth(jobs=["0013003"]), {**ME, "school": "none", "work": "none"})["job"] == "ok"
+    assert rows(youth(jobs=["0013003"]), {**ME, "school": "college"})["job"] == "unknown"
+    assert "job" not in rows(youth(), {**ME, "work": "working"})
+    assert rows(youth(schools=["0049005"]), {**ME, "school": "college"})["school"] == "ok"
+    # 대학에 다니면서 일하면 재직자 대상·대학생 대상 둘 다 맞다 (결정 0014)
+    both = {**ME, "school": "college", "work": "working"}
+    assert rows(youth(jobs=["0013001"]), both)["job"] == "ok" and rows(youth(schools=["0049005"]), both)["school"] == "ok"
+    assert rows(youth(jobs=["0013003"]), clean_profile({**ME, "activity": "rest_6m_plus"}))["job"] == "ok"   # 예전 답 (more_for 가 정리)
 
 
 def test_region_rows():
@@ -93,7 +98,7 @@ def test_empty_profile():
 
 def test_more_for_is_a_short_list():
     # 받을 수 있어 보여요는 모두, 확인해 볼 만한 지원은 분야마다 3개까지 (특정 대상·혼인 조건, 어려워 보여요는 빼고)
-    out = more_for({"age": 20, "region": "충북", "sigungu": "청주", "activity": "college", "income_band": "none"}, load_more(), TODAY)
+    out = more_for({"age": 20, "region": "충북", "sigungu": "청주", "school": "college", "income_band": "none"}, load_more(), TODAY)
     assert out["as_of"] == "2026-11-01"
     assert out["ok"] and all(i["status"] == "ok" for i in out["ok"])
     keys = [g["key"] for g in out["maybe"]]

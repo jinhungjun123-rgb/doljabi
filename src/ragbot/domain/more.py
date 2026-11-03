@@ -31,8 +31,16 @@ JOB_NAME = {"0013001": "재직자", "0013003": "미취업자"}
 SCHOOL_NAME = {"0049002": "고등학생", "0049005": "대학생"}
 SPECIAL_NAME = {"0014001": "중소기업", "0014002": "여성", "0014003": "기초생활수급자", "0014004": "한부모가정", "0014005": "장애인",
                 "0014006": "농업인", "0014007": "군인", "0014008": "지역인재", "0014009": "그 밖의 특정 대상"}
-USER_JOB = {"working": {"0013001"}, "rest_6m_plus": {"0013003"}, "rest_under_6m": {"0013003"}}
 USER_SCHOOL = {"middle_high": {"0049002"}, "college": {"0049005"}}
+
+
+def _user_job(profile: dict) -> set | None:
+    """재직자 / 미취업자 코드. 학생이 일하지 않으면 미취업자인지 알 수 없다 (정책마다 재학생을 넣거나 뺀다)."""
+    if profile.get("work") == "working":
+        return {"0013001"}
+    if profile.get("work") == "none" and profile.get("school") == "none":
+        return {"0013003"}
+    return None
 INCOME_BAND = {"none": (0, 0), "lt100": (0, 99), "100_200": (100, 199), "200_256": (200, 256), "gt256": (257, None)}  # 월, 만원
 LIFE_AGES = {"청소년": (13, 18), "청년": (19, 34)}
 CARE_WORDS = re.compile(r"돌봄|간병|영케어러")   # 가족을 돌보는 사람과 관련된 사업을 먼저
@@ -180,10 +188,9 @@ def judge(item: dict, profile: dict, today: str) -> dict | None:
     region, period = _region_row(item, profile), _period_row(item, today)
     if region is False or period is False:
         return None
-    activity = profile.get("activity")
     rows = [_age_row(item, profile.get("age")), region, _income_row(item, profile.get("income_band")), period,
-            _code_row("job", item.get("jobs") or [], JOB_NAME, USER_JOB.get(activity)),
-            _code_row("school", item.get("schools") or [], SCHOOL_NAME, USER_SCHOOL.get(activity)),
+            _code_row("job", item.get("jobs") or [], JOB_NAME, _user_job(profile)),
+            _code_row("school", item.get("schools") or [], SCHOOL_NAME, USER_SCHOOL.get(profile.get("school"))),
             _target_row(item, profile), *_restriction_rows(item, profile)]
     conditions = [r for r in rows if r]
     status = card_status(conditions)

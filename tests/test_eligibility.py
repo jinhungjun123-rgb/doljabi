@@ -4,7 +4,7 @@ from ragbot.domain.programs import load_programs
 
 # 충북 20세 대학생, 6개월 넘게 아픈 엄마와 함께 살며 돌봄, 35세 이상 다른 가족 없음, 소득 없음
 BASE = {"age": 20, "region": "충북", "relations": ["parent"], "conditions": ["long_illness"], "living": "together",
-        "adult_other": "none", "activity": "college", "basic_livelihood": "no", "income_band": "none"}
+        "adult_other": "none", "school": "college", "work": "none", "basic_livelihood": "no", "income_band": "none"}
 
 
 def cards(profile):
@@ -112,3 +112,41 @@ def test_study_work_hardship_is_left_to_the_center():
     old = {**BASE, "burden": "none"}   # 예전에 저장된 답은 판정에 쓰지 않는다
     assert cards(old)["A01"]["status"] == "ok"
     assert "힘듦" not in profile_summary(old)
+
+
+SCHOOL_ONLY = "학교에 다니지 않음 (졸업예정자·사이버·방송통신·야간대 재학생은 참여 가능)"
+
+
+def test_college_student_who_works():
+    # 4단계는 학교와 일을 따로 묻는다: 대학에 다니면서 일하는 청년 (결정 0014)
+    c = cards({**BASE, "school": "college", "work": "working"})
+    assert "B01" in c                                                       # 대학생이면 장학금 (일해도 됨)
+    b05 = {x["label"]: x["result"] for x in c["B05"]["conditions"]}
+    assert b05[SCHOOL_ONLY] == "unknown" and c["B05"]["status"] == "check"  # 재학생은 원칙적으로 어렵고 예외 있음
+    assert c["B04"]["status"] == "no"                                       # 6개월 넘게 취업·교육 이력 없음이 아님
+
+
+def test_youth_growth_project_is_open_to_working_youth():
+    # 고용24: "15세 ~ 34세 청년 누구나", 복지로: "입사 초기 청년을 위한 프로그램도 있어요" → 미취업 조건 없음
+    c = cards({**BASE, "school": "none", "work": "working"})
+    assert c["B05"]["status"] == "ok" and "B01" not in c
+    assert "미취업" not in " ".join(x["label"] for x in c["B05"]["conditions"])
+
+
+def test_challenge_needs_six_months_without_work_or_school():
+    assert cards({**BASE, "school": "none", "work": "none", "rest": "6m_plus"})["B04"]["status"] == "ok"
+    assert cards({**BASE, "school": "none", "work": "none", "rest": "under_6m"})["B04"]["status"] == "check"
+    assert cards({**BASE, "school": "none", "work": "working"})["B04"]["status"] == "no"
+
+
+def test_old_single_activity_answer_still_works():
+    # 예전 4단계 답(activity 하나)은 학교·일로 옮겨 판정한다
+    assert "B01" in cards({**{k: v for k, v in BASE.items() if k not in ("school", "work")}, "activity": "college"})
+    old = {k: v for k, v in BASE.items() if k not in ("school", "work")}
+    assert cards({**old, "activity": "rest_6m_plus"})["B04"]["status"] == "ok"
+    assert cards({**old, "activity": "working"})["B05"]["status"] == "check"    # 학교에 다니는지는 몰랐다
+
+
+def test_profile_summary_has_school_and_work():
+    s = profile_summary({**BASE, "school": "college", "work": "working"})
+    assert "대학생" in s and "일하고 있음" in s

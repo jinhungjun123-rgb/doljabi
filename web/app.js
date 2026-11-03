@@ -13,12 +13,20 @@
   // 옛 형식이나 손으로 고친 값: 형식이 틀리면 버리고 처음부터
   const typesOk = (p) => ["age", "military_months"].every((k) => p[k] == null || Number.isInteger(p[k]))
     && ["relations", "conditions"].every((k) => p[k] == null || Array.isArray(p[k]));
+  // 예전 4단계 답(하나만 고름) → 학교·일·쉰 기간 (docs/decisions/0014)
+  const FROM_ACTIVITY = { middle_high: { school: "middle_high" }, college: { school: "college" }, working: { work: "working" },
+    rest_6m_plus: { school: "none", work: "none", rest: "6m_plus" }, rest_under_6m: { school: "none", work: "none", rest: "under_6m" } };
+  function fromActivity(p) {
+    if (!("activity" in p)) return p;
+    const { activity, ...others } = p;
+    return others.school || others.work ? others : { ...others, ...(FROM_ACTIVITY[activity] || {}) };
+  }
   function loadProfile() {
     const raw = store.get(PROFILE_KEY);
     if (!raw) return {};
     try {
       const p = JSON.parse(raw);
-      if (p && typeof p === "object" && !Array.isArray(p) && typesOk(p)) return p;
+      if (p && typeof p === "object" && !Array.isArray(p) && typesOk(p)) return fromActivity(p);
     } catch { /* 깨진 값 */ }
     store.del(PROFILE_KEY);
     return {};
@@ -111,7 +119,10 @@
         <div class="q">${esc(q.adultOther)}</div>${chips("adult_other", o.adult_other)}${exc}`;
     }
     if (step === 4) {
-      return `<div class="q">${esc(q.activity)}</div>${chips("activity", o.activity)}`;
+      const rest = p.school === "none" && p.work === "none"
+        ? `<div class="sub-q"><div class="q">${esc(q.rest)}</div>${chips("rest", o.rest)}</div>` : "";
+      return `<div class="q">${esc(q.school)}</div>${chips("school", o.school)}
+        <div class="q">${esc(q.work)}</div>${chips("work", o.work)}${rest}`;
     }
     return `<div class="q">${esc(q.livelihood)}</div>${chips("basic_livelihood", o.basic_livelihood)}
       <div class="q">${esc(q.income)}</div>${chips("income_band", o.income_band)}
@@ -333,6 +344,7 @@
       } else {
         state.profile[field] = state.profile[field] === value ? undefined : value;
         if (field === "adult_other" && state.profile.adult_other !== "yes") delete state.profile.adult_other_exception;
+        if (!(state.profile.school === "none" && state.profile.work === "none")) delete state.profile.rest;
       }
       save();
       return screenQuestion();

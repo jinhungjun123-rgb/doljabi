@@ -12,6 +12,10 @@ CARE_NEEDS = {"ltc_grade", "severe_disability", "mental_illness", "long_illness"
 
 
 _NUMBERS, _LISTS = ("age", "military_months"), ("relations", "conditions")
+# 예전 4단계 답(하나만 고름) → 학교·일·쉰 기간 (docs/decisions/0014)
+_FROM_ACTIVITY = {"middle_high": {"school": "middle_high"}, "college": {"school": "college"}, "working": {"work": "working"},
+                  "rest_6m_plus": {"school": "none", "work": "none", "rest": "6m_plus"},
+                  "rest_under_6m": {"school": "none", "work": "none", "rest": "under_6m"}}
 
 
 def clean_profile(profile) -> dict:
@@ -28,6 +32,9 @@ def clean_profile(profile) -> dict:
             ok = value is None or isinstance(value, (str, bool))
         if ok:
             out[key] = value
+    if not ({"school", "work"} & out.keys()):
+        out.update(_FROM_ACTIVITY.get(out.get("activity"), {}))
+    out.pop("activity", None)
     return out
 
 
@@ -92,9 +99,18 @@ def _age_in(p: dict, lo: int, hi: int) -> bool:
     return p.get("age") is None or lo <= p["age"] <= hi
 
 
-def _activity(p: dict, label: str, law: str, ok: set, no: set) -> dict:
-    a = p.get("activity")
-    return _cond(label, law, "ok" if a in ok else "no" if a in no else "unknown")
+def _no_school(p: dict) -> dict:
+    # 고용노동부 안내 (2026.8): 재학생은 원칙적으로 참여할 수 없고, 졸업예정자·사이버·방송통신·야간대 재학생 등은 참여 가능
+    school = p.get("school")
+    return _cond("학교에 다니지 않음 (졸업예정자·사이버·방송통신·야간대 재학생은 참여 가능)", "고용노동부 안내 2026",
+                 "ok" if school == "none" else "unknown")
+
+
+def _no_work_or_school_6m(p: dict) -> dict:
+    school, work, rest = p.get("school"), p.get("work"), p.get("rest")
+    result = ("no" if school in ("middle_high", "college") or work == "working"
+              else "ok" if school == "none" and work == "none" and rest == "6m_plus" else "unknown")
+    return _cond("6개월 넘게 취업·교육 이력 없음", "고용24 2026", result)
 
 
 def _local(lo: int, hi: int, law: str):
@@ -118,13 +134,13 @@ RULES = {
         _cond("가족이 장기요양 등급을 받았어요 (인지지원등급 제외)", "법 제19조②1, 시행령 제12조", "ok"), _selected()],
     "A06": lambda p, _: None if p.get("basic_livelihood") != "yes" else [
         _cond("기초생활 수급 가구", "법 제19조②3, 시행규칙 제9조", "ok"), _selected()],
-    "B01": lambda p, _: None if p.get("activity") != "college" else [
+    "B01": lambda p, _: None if p.get("school") != "college" else [
         _cond("대학생", "한국장학재단", "ok"), _cond("학자금 지원구간 9구간 이하", "한국장학재단", "unknown")],
     "B04": lambda p, _: None if not _age_in(p, 18, 34) else [
         _age(p, 18, 34, "고용24 2026"),
-        _activity(p, "6개월 넘게 취업·교육 이력 없음", "고용24 2026", {"rest_6m_plus"}, {"working", "college", "middle_high"})],
+        _no_work_or_school_6m(p)],
     "B05": lambda p, _: None if not _age_in(p, 15, 34) else [
-        _age(p, 15, 34, "고용24"), _activity(p, "미취업", "고용24", {"rest_6m_plus", "rest_under_6m"}, {"working"})],
+        _age(p, 15, 34, "고용24"), _no_school(p)],   # 미취업은 조건이 아님: 고용24 "15세 ~ 34세 청년 누구나"
     "C01": _local(9, 39, "서울시 공고 2026"),
     "C04": _local(13, 39, "충청북도 공고 2026"),
     "C05": _local(13, 39, "울산광역시 공고 2026"),
@@ -159,8 +175,9 @@ _TEXT = {
     "adult_other": {"none": "함께 사는 35세 이상 다른 가족 없음", "yes": "함께 사는 35세 이상 다른 가족 있음"},
     "adult_other_exception": {"ill_or_disabled": "그 가족도 아프거나 장애가 있음", "absent": "그 가족은 외국·병원·시설 등에 있어 집에 없음",
                               "none": "그 가족은 예외에 해당하지 않음"},
-    "activity": {"middle_high": "중·고등학생", "college": "대학생", "working": "일하고 있음", "rest_6m_plus": "6개월 넘게 쉬고 있음",
-                 "rest_under_6m": "쉰 지 6개월 안 됨", "other": "그 밖에"},
+    "school": {"middle_high": "중·고등학생", "college": "대학생", "none": "학교에 다니지 않음"},
+    "work": {"working": "일하고 있음 (아르바이트 포함)", "none": "일하지 않음"},
+    "rest": {"6m_plus": "학교·일을 쉰 지 6개월 넘음", "under_6m": "학교·일을 쉰 지 6개월 안 됨"},
     "basic_livelihood": {"yes": "기초생활 수급·차상위 가구", "no": "기초생활 수급·차상위 아님"},
     "income_band": {"none": "본인 월 소득 없음", "lt100": "본인 월 소득 100만원 아래", "100_200": "본인 월 소득 100~200만원",
                     "200_256": "본인 월 소득 200~256만원", "gt256": "본인 월 소득 256만원 넘음"},
@@ -186,7 +203,7 @@ def profile_summary(profile: dict) -> str:
         names = [_TEXT[key][v] for v in profile.get(key) or [] if v in _TEXT[key]]
         if names:
             parts.append(("돌보는 가족: " if key == "relations" else "가족의 상황: ") + ", ".join(names))
-    for key in ("living", "adult_other", "adult_other_exception", "activity", "basic_livelihood", "income_band"):
+    for key in ("living", "adult_other", "adult_other_exception", "school", "work", "rest", "basic_livelihood", "income_band"):
         if profile.get(key) in _TEXT[key]:
             parts.append(_TEXT[key][profile[key]])
     known = "; ".join(parts) if parts else "입력한 정보 없음"
