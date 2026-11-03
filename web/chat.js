@@ -18,13 +18,13 @@
     if (m.role === "user") return `<div class="bub me">${esc(m.content)}</div>`;
     if (m.error) {
       const center = D.state.match?.center;
-      const call = center && center.phone ? `<a class="btn small" href="tel:${esc(center.phone)}">📞 ${esc(center.phone)}</a>` : "";
-      return `<div class="bub bot err">${esc(c().error)}<div class="row wrap">${call}<a class="btn small" href="tel:129">📞 129</a>
+      const call = center && center.phone ? `<a class="btn small" href="tel:${esc(center.phone)}">${D.ico("phone")}${esc(center.phone)}</a>` : "";
+      return `<div class="bub bot err">${esc(c().error)}<div class="row wrap">${call}<a class="btn small" href="tel:129">${D.ico("phone")}129</a>
         <button type="button" class="btn small ghost" data-retry>${esc(c().retry)}</button></div></div>`;
     }
-    const chips = (m.chips || []).map((ch, j) => `<button type="button" class="src" data-src="${i}-${j}">📘 ${esc(ch.label)}</button>
+    const chips = (m.chips || []).map((ch, j) => `<button type="button" class="src" data-src="${i}-${j}">${D.ico("doc")}${esc(ch.label)}</button>
       ${ch.open && ch.text ? `<div class="srctext">${esc(ch.text)}</div>` : ""}`).join("");
-    const web = (m.web || []).map((u) => `<a class="src web" href="${esc(u)}" target="_blank" rel="noopener">${esc(c().web)}</a>`).join("");
+    const web = (m.web || []).map((u) => `<a class="src web" href="${esc(u)}" target="_blank" rel="noopener">${D.ico("out")}${esc(c().web)}</a>`).join("");
     return `<div class="bub bot">${rich(m.content)}
       ${chips || web ? `<div class="srcs">${chips}${web}</div>` : ""}<div class="disc">${esc(c().disclaimer)}</div></div>`;
   }

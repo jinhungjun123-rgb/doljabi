@@ -3,7 +3,7 @@
   "short_name": "돌잡이",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#fff8f2",
-  "theme_color": "#f07c5a",
+  "background_color": "#ffffff",
+  "theme_color": "#2c4270",
   "lang": "ko"
 }

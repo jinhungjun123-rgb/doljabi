@@ -47,24 +47,40 @@
     if (idk) items.push(`<button type="button" class="chip idk${on("unknown") ? " on" : ""}" data-field="${field}" data-value="unknown" data-multi="${multi}">${esc(t().idk)}</button>`);
     return `<div class="chips${grid ? " grid" : ""}">${items.join("")}</div>`;
   }
+  // 선 아이콘 (이모지 대신): 24×24, 색은 글자색을 따른다
+  const ICONS = {
+    phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>',
+    list: '<path d="M4 6h16M4 12h16M4 18h10"/>',
+    chat: '<path d="M4 5h16v11H9l-5 4z"/>',
+    pin: '<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+    lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    back: '<path d="M15 18l-6-6 6-6"/>',
+    next: '<path d="M9 6l6 6-6 6"/>',
+    doc: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>',
+    out: '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+    alert: '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
+  };
+  const ico = (name) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
   const statusPill = (s) => `<span class="st ${s}">${esc(t().results.status[s])}</span>`;
-  function tagFor(p) {
-    if (p.group === "local") return `<span class="tag local">${esc(p.region)}</span>`;
-    return `<span class="tag${p.group === "linked" ? " linked" : ""}">${esc(t().results.tags[p.group])}</span>`;
+  // "가족돌봄 국가 제도 · 법령 확인" 처럼 분류를 글자로 (결과 목록은 섹션 제목이 같은 말을 하므로 상세에서만)
+  function kickerFor(p) {
+    const r = t().results;
+    return p.group === "local" ? r.groups.local(p.region) : `${r.groups[p.group]} · ${r.tags[p.group]}`;
   }
   function centerBlock(center) {
     const r = t().results;
     if (!center) return `<div class="center"><p>${esc(r.noRegion)}</p></div>`;
     if (center.status !== "open") {
-      return `<div class="center"><span class="label">${esc(r.myCenter)}</span><p>${esc(r.preparing(center.region))}</p>
-        <div class="actions"><a href="${LINKS.youthOn}" target="_blank" rel="noopener">${esc(r.apply)}</a><a href="tel:129">📞 129</a></div></div>`;
+      return `<div class="center"><div><span class="label">${esc(r.myCenter)}</span><b>${esc(center.region)}</b></div>
+        <div class="actions"><a href="${LINKS.youthOn}" target="_blank" rel="noopener">${esc(r.apply)}</a><a class="line" href="tel:129">${ico("phone")}129</a></div>
+        <p>${esc(r.preparing(center.region))}</p></div>`;
     }
     const phone = center.phone
-      ? `<a href="tel:${esc(center.phone)}">${r.call} ${esc(center.phone)}</a>`
-      : `<a href="tel:129">📞 129</a>`;
-    return `<div class="center"><span class="label">${esc(r.myCenter)}</span><b>${esc(center.name)}</b>
-      ${center.phone ? "" : `<p>${esc(r.noCenterPhone)}</p>`}
-      <div class="actions">${phone}<a href="${LINKS.youthOn}" target="_blank" rel="noopener">${esc(r.apply)}</a></div></div>`;
+      ? `<a href="tel:${esc(center.phone)}">${ico("phone")}${esc(center.phone)}</a>`
+      : `<a href="tel:129">${ico("phone")}129</a>`;
+    return `<div class="center"><div><span class="label">${esc(r.myCenter)}</span><b>${esc(center.name)}</b></div>
+      <div class="actions">${phone}<a class="line" href="${LINKS.youthOn}" target="_blank" rel="noopener">${esc(r.apply)}</a></div>
+      ${center.phone ? "" : `<p>${esc(r.noCenterPhone)}</p>`}</div>`;
   }
 
   // ---------------------------------------------------------------- 질문 5단계
@@ -75,7 +91,7 @@
         ? `<div class="sub-q"><div class="q">${esc(q.military)}</div><div class="row">
              <input class="field" id="military" inputmode="numeric" placeholder="${esc(q.militaryPh)}" value="${p.military_months > 0 ? p.military_months : ""}">
              <button type="button" class="chip${p.military_months === 0 ? " on" : ""}" id="noMilitary">${esc(q.noMilitary)}</button></div></div>` : "";
-      return `<div class="privacy">${esc(t().privacy)}</div>
+      return `<div class="privacy">${ico("lock")}${esc(t().privacy)}</div>
         <div class="q">${esc(q.age)}</div>
         <div class="row"><input class="field" id="age" inputmode="numeric" placeholder="${esc(q.agePh)}" value="${p.age ?? ""}">
           <button type="button" class="chip idk${p.age_unknown ? " on" : ""}" id="ageIdk">${esc(t().idk)}</button></div>
@@ -143,26 +159,29 @@
       ...(p.relations || []).map((v) => o.relations[v]).filter(Boolean)].filter(Boolean);
     const groups = { national: [], linked: [], local: [] };
     for (const c of state.match.cards) groups[c.group].push(c);
+    const count = (s) => state.match.cards.filter((c) => c.status === s).length;
     const section = (g) => {
       if (!groups[g].length) return "";
       const title = g === "local" ? r.groups.local(p.region) : r.groups[g];
       return `<h2>${esc(title)}</h2>` + groups[g].map((c) => {
         const prog = programById(c.id);
+        const closed = prog.closed ? ` · <span class="tag closed">${esc(r.closed)}</span>` : "";
         return `<button type="button" class="card" data-detail="${c.id}">
-          <span class="meta">${tagFor(prog)}${statusPill(c.status)}${prog.closed ? `<span class="tag closed">${esc(r.closed)}</span>` : ""}</span>
-          <span class="name">${esc(prog.name)}</span><span class="desc">${esc(prog.summary)}</span></button>`;
+          <span class="main"><span class="name">${esc(prog.name)}</span><span class="desc">${esc(prog.summary)}${closed}</span></span>
+          ${statusPill(c.status)}</button>`;
       }).join("");
     };
-    app.innerHTML = `<h1>${esc(r.title)}</h1>
-      <div class="summary">${tags.map((x) => `<span>${esc(x)}</span>`).join("")}
+    app.innerHTML = `<div class="summary"><span>${tags.map(esc).join(" · ")}</span>
         <button type="button" class="linkbtn" data-go="start">${esc(r.edit)}</button>
         <button type="button" class="linkbtn" data-go="clear">${esc(r.clear)}</button></div>
+      <h1>${esc(count("ok") ? r.titleN(count("ok")) : r.title)}</h1>
+      <p class="sub">${esc(r.lead(count("check")))}</p>
       ${centerBlock(state.match.center)}
       ${section("national")}${section("linked")}${section("local")}
-      <h2></h2>
-      <button type="button" class="card more" data-go="more">${esc(r.more)}<br><span class="note">${esc(r.moreSub)}</span></button>
-      <div class="card guide">${esc(r.others)}<div class="links"><a href="${LINKS.bokjiro}" target="_blank" rel="noopener">복지로</a>
-        <a href="${LINKS.youthCenter}" target="_blank" rel="noopener">온통청년</a><a href="tel:129">📞 129</a></div></div>
+      <button type="button" class="card more" data-go="more"><span class="main"><span class="name">${esc(r.more)}</span>
+        <span class="desc">${esc(r.moreSub)}</span></span><span class="go">${ico("next")}</span></button>
+      <div class="guide">${esc(r.others)}<div class="links"><a href="${LINKS.bokjiro}" target="_blank" rel="noopener">복지로</a>
+        <a href="${LINKS.youthCenter}" target="_blank" rel="noopener">온통청년</a><a href="tel:129">보건복지상담센터 129</a></div></div>
       <p class="foot">${esc(r.foot)}</p>`;
   }
 
@@ -171,19 +190,18 @@
     const d = t().detail, prog = programById(state.params.id);
     if (!state.match) state.match = await api("/api/match", { profile: state.profile });
     const card = state.match.cards.find((c) => c.id === prog.id);
-    const conds = card && card.conditions.length
-      ? `<div class="conds">${card.conditions.map((c) => `<div class="cond"><span>${ICON[c.result]}</span>
-          <span>${esc(c.label)}<span class="law">${esc(c.law)}</span></span></div>`).join("")}</div>` : "";
+    const conds = card && card.conditions.length ? `<h2>${esc(d.conditions)}</h2>${condList(card.conditions)}` : "";
     const center = state.match.center;
     const call = center && center.status === "open" && center.phone
-      ? `<a class="btn" href="tel:${esc(center.phone)}">📞 ${esc(center.name)} ${esc(center.phone)}</a>`
-      : `<a class="btn" href="tel:129">${esc(d.call129)}</a>`;
+      ? `<a class="btn" href="tel:${esc(center.phone)}">${ico("phone")}${esc(center.name)} ${esc(center.phone)}</a>`
+      : `<a class="btn" href="tel:129">${ico("phone")}${esc(d.call129)}</a>`;
     const field = (label, value) => (value ? `<dt>${esc(label)}</dt><dd>${linkify(value)}</dd>` : "");
-    app.innerHTML = `<button type="button" class="back" data-go="results">${esc(d.back)}</button>
-      <div class="meta">${tagFor(prog)} ${card ? statusPill(card.status) : ""} ${prog.closed ? `<span class="tag closed">${esc(t().results.closed)}</span>` : ""}</div>
+    app.innerHTML = `<button type="button" class="back" data-go="results">${ico("back")}${esc(d.back)}</button>
+      <div class="meta"><span>${esc(kickerFor(prog))}</span>${prog.closed ? `<span class="tag closed">${esc(t().results.closed)}</span>` : ""}</div>
       <h1>${esc(prog.name)}</h1><p class="sub">${esc(prog.summary)}</p>
+      ${card ? `<div class="statusline">${statusPill(card.status)}</div>` : ""}
       ${conds}
-      ${prog.notice ? `<div class="warn">⚠ ${esc(prog.notice)}</div>` : ""}
+      ${prog.notice ? `<div class="warn">${ico("alert")}<span>${esc(prog.notice)}</span></div>` : ""}
       <dl>${field(d.target, prog.target)}${field(d.income, prog.income)}${field(d.benefit, prog.benefit)}${field(d.how, prog.how)}
         ${field(d.period, prog.period)}${field(d.contact, prog.contact)}${field(d.source, prog.source)}${field(d.checked, prog.checked)}</dl>
       <div class="stack">${call}<button type="button" class="btn ghost" data-ask="${prog.id}">${esc(d.ask)}</button></div>
@@ -191,7 +209,9 @@
   }
 
   // ---------------------------------------------------------------- 일반 지원 (공공데이터, 자동 확인)
-  const ICON = { ok: "✅", unknown: "❔", no: "❌", info: "ℹ️" };   // info: 판정하지 않고 안내만 하는 조건
+  // 조건 목록: 왼쪽 상태색 띠 + 상태 글자 (info: 판정하지 않고 안내만 하는 조건)
+  const condList = (conds) => `<div class="conds">${conds.map((c) => `<div class="cond ${esc(c.result)}"><small>${esc(t().detail.result[c.result] || "")}</small>
+      ${esc(c.label)}${c.law ? `<span class="law">${esc(c.law)}</span>` : ""}</div>`).join("")}</div>`;
   async function loadMore() {
     const key = JSON.stringify(state.profile);
     if (!state.more || state.moreFor !== key) {
@@ -201,24 +221,21 @@
     return state.more;
   }
   const moreById = (id) => state.more && [...state.more.ok, ...state.more.maybe.flatMap((g) => g.items)].find((i) => i.id === id);
-  function moreMeta(i) {
-    const m = t().more;
-    return `<span class="tag auto">${esc(m.badge)}</span>${statusPill(i.status)}<span class="tag src">${esc(m.source[i.source])}</span>`;
-  }
+  const moreKicker = (i) => `${t().more.source[i.source]} · ${i.org || t().more.badge}`;
 
   async function screenMore() {
     // 받을 수 있어 보여요는 모두, 확인해 볼 만한 지원은 분야마다 몇 개만 (나머지는 온통청년·복지로에서 찾아보기)
     const m = t().more, data = await loadMore();
-    const card = (i) => `<button type="button" class="card" data-more="${esc(i.id)}"><span class="meta">${moreMeta(i)}</span>
-      <span class="name">${esc(i.name)}</span><span class="desc">${esc(i.summary)}</span></button>`;
+    const card = (i) => `<button type="button" class="card" data-more="${esc(i.id)}">
+      <span class="main"><span class="name">${esc(i.name)}</span><span class="desc">${esc(moreKicker(i))}</span></span>${statusPill(i.status)}</button>`;
     const ok = data.ok.length ? `<h2>${esc(m.okTitle(data.ok.length))}</h2>${data.ok.map(card).join("")}`
-      : `<div class="card guide">${esc(m.noOk)}<div class="links"><button type="button" class="linkbtn" data-go="start">${esc(m.edit)}</button></div></div>`;
+      : `<div class="guide">${esc(m.noOk)}<div class="links"><button type="button" class="linkbtn" data-go="start">${esc(m.edit)}</button></div></div>`;
     const maybe = data.maybe.length ? `<h2>${esc(m.maybeTitle)}</h2><p class="note">${esc(m.maybeSub)}</p>
       ${data.maybe.map((g) => `<h3>${esc(g.label)}</h3>${g.items.map(card).join("")}`).join("")}` : "";
-    app.innerHTML = `<button type="button" class="back" data-go="results">${esc(t().detail.back)}</button>
+    app.innerHTML = `<button type="button" class="back" data-go="results">${ico("back")}${esc(t().detail.back)}</button>
       <h1>${esc(m.title)}</h1><p class="sub">${esc(m.intro(data.as_of))}</p>
       ${ok}${maybe}
-      <div class="card guide">${esc(m.findMore)}<div class="links"><a href="${LINKS.youthCenter}" target="_blank" rel="noopener">온통청년</a>
+      <div class="guide">${esc(m.findMore)}<div class="links"><a href="${LINKS.youthCenter}" target="_blank" rel="noopener">온통청년</a>
         <a href="${LINKS.bokjiro}" target="_blank" rel="noopener">복지로</a></div></div>
       <p class="foot">${esc(t().results.foot)}</p>`;
   }
@@ -228,15 +245,15 @@
     await loadMore();
     const i = moreById(state.params.moreId);
     if (!i) return go("more");
-    const conds = i.conditions.length ? `<div class="conds">${i.conditions.map((c) => `<div class="cond"><span>${ICON[c.result]}</span>
-      <span>${esc(c.label)}</span></div>`).join("")}</div>` : "";
+    const conds = i.conditions.length ? `<h2>${esc(t().detail.conditions)}</h2>${condList(i.conditions)}` : "";
     const link = /^https?:\/\//.test(i.link) ? i.link : LINKS.youthCenter;
-    app.innerHTML = `<button type="button" class="back" data-go="more">${esc(m.back)}</button>
-      <div class="meta">${moreMeta(i)}</div>
+    app.innerHTML = `<button type="button" class="back" data-go="more">${ico("back")}${esc(m.back)}</button>
+      <div class="meta"><span>${esc(m.source[i.source])} · ${esc(m.badge)}</span></div>
       <h1>${esc(i.name)}</h1><p class="sub">${esc(i.summary)}</p>
+      <div class="statusline">${statusPill(i.status)}</div>
       ${conds}<p class="note">${esc(m.rest)}</p>
       <dl><dt>${esc(m.org)}</dt><dd>${esc(i.org)}</dd></dl>
-      <div class="stack"><a class="btn" href="${esc(link)}" target="_blank" rel="noopener">${esc(m.open)}</a>
+      <div class="stack"><a class="btn" href="${esc(link)}" target="_blank" rel="noopener">${esc(m.open)}${ico("out")}</a>
         <button type="button" class="btn ghost" data-ask-more="${esc(i.id)}">${esc(m.ask)}</button></div>
       <p class="foot">${esc(t().results.foot)}</p>`;
   }
@@ -246,15 +263,15 @@
     const c = t().centers, mine = state.profile.region;
     const open = state.data.centers.filter((x) => x.status === "open").sort((a, b) => (b.region === mine) - (a.region === mine));
     const prep = state.data.centers.filter((x) => x.status !== "open");
-    const row = (x) => `<div class="crow${x.region === mine ? " mine" : ""}"><div><b>${esc(x.region)}</b> ${esc(x.name)}
-        ${x.region === mine ? `<small>${esc(c.mine)}</small>` : ""}</div>
-        ${x.phone ? `<a href="tel:${esc(x.phone)}">📞 ${esc(x.phone)}</a>` : `<a href="${LINKS.youthOn}" target="_blank" rel="noopener">청년ON</a>`}</div>`;
+    const row = (x) => `<div class="crow${x.region === mine ? " mine" : ""}"><div><span class="rg">${esc(x.region)}</span><b>${esc(x.name)}</b>
+        ${x.region === mine ? `<span class="mytag">${esc(c.mine)}</span>` : ""}</div>
+        ${x.phone ? `<a href="tel:${esc(x.phone)}">${ico("phone")}${esc(x.phone)}</a>` : `<a href="${LINKS.youthOn}" target="_blank" rel="noopener">청년ON</a>`}</div>`;
     app.innerHTML = `<h1>${esc(c.title)}</h1><p class="sub">${esc(c.sub)} (${esc(state.data.updated)})</p>
       <h2>${esc(c.open(open.length))}</h2>${open.map(row).join("")}
       <h2>${esc(c.preparing(prep.length))}</h2>
       <div class="crow${prep.some((x) => x.region === mine) ? " mine" : ""}"><div><b>${esc(prep.map((x) => x.region).join(" · "))}</b>
         <small>${esc(c.preparingNote)}</small></div><a href="${LINKS.youthOn}" target="_blank" rel="noopener">청년ON</a></div>
-      <h2></h2><div class="crow"><div>${esc(c.unsure)}<br><b>${esc(c.hotline)}</b></div><a href="tel:129">📞 129</a></div>`;
+      <div class="crow"><div>${esc(c.unsure)} <b>${esc(c.hotline)}</b></div><a href="tel:129">${ico("phone")}129</a></div>`;
   }
 
   function screenChatPlaceholder() {
@@ -268,9 +285,9 @@
 
   function renderChrome() {
     document.getElementById("brandSub").textContent = t().appSub;
-    const ico = { results: "🧭", chat: "💬", centers: "📍" };
+    const icon = { results: "list", chat: "chat", centers: "pin" };
     document.getElementById("tabs").innerHTML = ["results", "chat", "centers"].map((k) =>
-      `<button type="button" data-tab="${k}" class="${TAB_OF[state.screen] === k ? "on" : ""}"><span class="ico">${ico[k]}</span>${esc(t().tabs[k])}</button>`).join("");
+      `<button type="button" data-tab="${k}" class="${TAB_OF[state.screen] === k ? "on" : ""}">${ico(icon[k])}${esc(t().tabs[k])}</button>`).join("");
   }
 
   async function render() {
@@ -279,8 +296,8 @@
       await screens[state.screen]();
     } catch (e) {
       console.error(e);
-      app.innerHTML = `<p class="sub">⚠ 화면을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.</p>
-        <a class="btn" href="tel:129">📞 129</a>
+      app.innerHTML = `<div class="warn">${ico("alert")}<span>화면을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.</span></div>
+        <a class="btn" href="tel:129">${ico("phone")}129</a>
         <button type="button" class="btn ghost" data-go="clear">${esc(t().results.clear)}</button>`;
     }
   }
@@ -349,14 +366,15 @@
   });
   document.getElementById("brand").addEventListener("click", () => go(state.profile.done ? "results" : "q", { step: 1 }));
 
-  window.Dol = { state, go, api, t, esc, linkify, screens, programById, moreById, render };
+  window.Dol = { state, go, api, t, esc, ico, linkify, screens, programById, moreById, render };
 
   (async () => {
     try {
       state.data = await api("/api/programs");
     } catch (e) {
       console.error(e);
-      app.innerHTML = `<p class="sub">⚠ 서버에 연결하지 못했어요. 잠시 뒤 다시 열어 주세요.</p><a class="btn" href="tel:129">📞 129</a>`;
+      app.innerHTML = `<div class="warn">${ico("alert")}<span>서버에 연결하지 못했어요. 잠시 뒤 다시 열어 주세요.</span></div>
+        <a class="btn" href="tel:129">${ico("phone")}129</a>`;
       return;
     }
     go(state.profile.done ? "results" : "q", { step: 1 });
