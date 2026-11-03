@@ -2,9 +2,9 @@
 from ragbot.domain.eligibility import card_status, match, profile_summary
 from ragbot.domain.programs import load_programs
 
-# 충북 20세 대학생, 6개월 넘게 아픈 엄마와 함께 살며 돌봄, 35세 이상 다른 가족 없음, 돌봄 때문에 학업이 많이 힘듦, 소득 없음
+# 충북 20세 대학생, 6개월 넘게 아픈 엄마와 함께 살며 돌봄, 35세 이상 다른 가족 없음, 소득 없음
 BASE = {"age": 20, "region": "충북", "relations": ["parent"], "conditions": ["long_illness"], "living": "together",
-        "adult_other": "none", "activity": "college", "burden": "high", "basic_livelihood": "no", "income_band": "none"}
+        "adult_other": "none", "activity": "college", "basic_livelihood": "no", "income_band": "none"}
 
 
 def cards(profile):
@@ -62,7 +62,7 @@ def test_center_fallback():
 
 def test_every_condition_has_law():
     for c in match(BASE, load_programs())["cards"]:
-        assert all(x["law"] and x["result"] in {"ok", "unknown", "no"} for x in c["conditions"])
+        assert all(x["law"] and x["result"] in {"ok", "unknown", "no", "info"} for x in c["conditions"])
 
 
 def test_card_order_and_status_rule():
@@ -71,6 +71,7 @@ def test_card_order_and_status_rule():
     assert card_status([]) == "ok"
     assert card_status([{"result": "ok"}, {"result": "unknown"}]) == "check"
     assert card_status([{"result": "unknown"}, {"result": "no"}]) == "no"
+    assert card_status([{"result": "ok"}, {"result": "info"}]) == "ok"
 
 
 def test_profile_summary():
@@ -101,3 +102,13 @@ def test_wrong_field_types_count_as_unanswered():
         c = cards({**BASE, **bad})
         assert c["A01"]["status"] in ("ok", "check", "no")
         profile_summary({**BASE, **bad})
+
+
+def test_study_work_hardship_is_left_to_the_center():
+    # 법 제13조①1라목 "학업 및 취업에 상당한 곤란"은 객관적 기준이 없고 센터가 상담으로 판단한다: 묻지 않고 안내만 (결정 0012)
+    for pid in ("A01", "A02"):
+        row = next(x for x in cards(BASE)[pid]["conditions"] if "곤란" in x["label"])
+        assert row["result"] == "info" and row["law"] == "법 제13조①1라목" and "상담" in row["label"]
+    old = {**BASE, "burden": "none"}   # 예전에 저장된 답은 판정에 쓰지 않는다
+    assert cards(old)["A01"]["status"] == "ok"
+    assert "힘듦" not in profile_summary(old)

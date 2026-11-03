@@ -96,8 +96,7 @@
         <div class="q">${esc(q.adultOther)}</div>${chips("adult_other", o.adult_other)}${exc}`;
     }
     if (step === 4) {
-      return `<div class="q">${esc(q.activity)}</div>${chips("activity", o.activity)}
-        <div class="q">${esc(q.burden)}</div>${chips("burden", o.burden)}`;
+      return `<div class="q">${esc(q.activity)}</div>${chips("activity", o.activity)}`;
     }
     return `<div class="q">${esc(q.livelihood)}</div>${chips("basic_livelihood", o.basic_livelihood)}
       <div class="q">${esc(q.income)}</div>${chips("income_band", o.income_band)}
@@ -172,9 +171,8 @@
     const d = t().detail, prog = programById(state.params.id);
     if (!state.match) state.match = await api("/api/match", { profile: state.profile });
     const card = state.match.cards.find((c) => c.id === prog.id);
-    const icon = { ok: "✅", unknown: "❔", no: "❌" };
     const conds = card && card.conditions.length
-      ? `<div class="conds">${card.conditions.map((c) => `<div class="cond"><span>${icon[c.result]}</span>
+      ? `<div class="conds">${card.conditions.map((c) => `<div class="cond"><span>${ICON[c.result]}</span>
           <span>${esc(c.label)}<span class="law">${esc(c.law)}</span></span></div>`).join("")}</div>` : "";
     const center = state.match.center;
     const call = center && center.status === "open" && center.phone
@@ -193,7 +191,7 @@
   }
 
   // ---------------------------------------------------------------- 일반 지원 (공공데이터, 자동 확인)
-  const ICON = { ok: "✅", unknown: "❔", no: "❌" };
+  const ICON = { ok: "✅", unknown: "❔", no: "❌", info: "ℹ️" };   // info: 판정하지 않고 안내만 하는 조건
   async function loadMore() {
     const key = JSON.stringify(state.profile);
     if (!state.more || state.moreFor !== key) {

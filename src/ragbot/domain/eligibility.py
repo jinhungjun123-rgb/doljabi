@@ -67,9 +67,8 @@ def _address(p: dict) -> dict:
 
 
 def _burden(p: dict) -> dict:
-    b = p.get("burden")
-    return _cond("돌봄 때문에 학업·취업이 많이 힘듦", "법 제13조①1",
-                 "ok" if b == "high" else "no" if b == "none" else "unknown")
+    # 객관적 기준이 없고 센터가 상담으로 판단한다: 묻지 않고 안내만, 카드 상태에 넣지 않음 (docs/decisions/0012)
+    return _cond("돌봄 때문에 학업·취업에 상당한 곤란을 겪음 (청년미래센터 상담에서 판단해요)", "법 제13조①1라목", "info")
 
 
 def _income(p: dict) -> dict:
@@ -137,7 +136,7 @@ _STATUS_ORDER = {"ok": 0, "check": 1, "no": 2}
 
 
 def card_status(conditions: list[dict]) -> str:
-    results = {c["result"] for c in conditions}
+    results = {c["result"] for c in conditions} - {"info"}   # info: 안내만 하는 조건
     return "no" if "no" in results else "ok" if results <= {"ok"} else "check"
 
 
@@ -163,7 +162,6 @@ _TEXT = {
                               "none": "그 가족은 예외에 해당하지 않음"},
     "activity": {"middle_high": "중·고등학생", "college": "대학생", "working": "일하고 있음", "rest_6m_plus": "6개월 넘게 쉬고 있음",
                  "rest_under_6m": "쉰 지 6개월 안 됨", "other": "그 밖에"},
-    "burden": {"high": "돌봄 때문에 학교·일이 많이 힘듦", "some": "돌봄 때문에 학교·일이 조금 힘듦", "none": "돌봄 때문에 학교·일이 힘들지 않음"},
     "basic_livelihood": {"yes": "기초생활 수급·차상위 가구", "no": "기초생활 수급·차상위 아님"},
     "income_band": {"none": "본인 월 소득 없음", "lt100": "본인 월 소득 100만원 아래", "100_200": "본인 월 소득 100~200만원",
                     "200_256": "본인 월 소득 200~256만원", "gt256": "본인 월 소득 256만원 넘음"},
@@ -189,7 +187,7 @@ def profile_summary(profile: dict) -> str:
         names = [_TEXT[key][v] for v in profile.get(key) or [] if v in _TEXT[key]]
         if names:
             parts.append(("돌보는 가족: " if key == "relations" else "가족의 상황: ") + ", ".join(names))
-    for key in ("living", "adult_other", "adult_other_exception", "activity", "burden", "basic_livelihood", "income_band"):
+    for key in ("living", "adult_other", "adult_other_exception", "activity", "basic_livelihood", "income_band"):
         if profile.get(key) in _TEXT[key]:
             parts.append(_TEXT[key][profile[key]])
     known = "; ".join(parts) if parts else "입력한 정보 없음"
