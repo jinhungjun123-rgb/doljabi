@@ -4,7 +4,7 @@ window.I18N = {
     appName: "돌잡이", appSub: "돌봄길잡이",
     tabs: { results: "내 지원", chat: "물어보기", centers: "센터 찾기" },
     privacy: "입력한 정보는 이 휴대폰에만 남고 서버에 저장되지 않아요",
-    next: "다음", prev: "이전", seeResults: "결과 보기", idk: "잘 모르겠어요", optional: "선택",
+    next: "다음", prev: "이전", seeResults: "결과 보기", optional: "선택",
     step: (n) => `${n} / 5`,
     steps: ["나에 대해", "돌보는 가족", "함께 사는 사람", "학교와 일", "소득"],
     q: {

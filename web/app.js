@@ -39,12 +39,12 @@
   }
 
   // ---------------------------------------------------------------- 공통 조각
-  function chips(field, options, { multi = false, idk = true, grid = false } = {}) {
+  // "잘 모르겠어요" 보기는 두지 않는다: 고르지 않고 넘어가면 그 조건은 "확인 필요" (결정 0013)
+  function chips(field, options, { multi = false, grid = false } = {}) {
     const cur = state.profile[field];
     const on = (v) => (multi ? (cur || []).includes(v) : cur === v);
     const items = Object.entries(options).map(([v, label]) =>
       `<button type="button" class="chip${on(v) ? " on" : ""}" data-field="${field}" data-value="${esc(v)}" data-multi="${multi}">${esc(label)}</button>`);
-    if (idk) items.push(`<button type="button" class="chip idk${on("unknown") ? " on" : ""}" data-field="${field}" data-value="unknown" data-multi="${multi}">${esc(t().idk)}</button>`);
     return `<div class="chips${grid ? " grid" : ""}">${items.join("")}</div>`;
   }
   // 선 아이콘 (이모지 대신): 24×24, 색은 글자색을 따른다
@@ -93,8 +93,7 @@
              <button type="button" class="chip${p.military_months === 0 ? " on" : ""}" id="noMilitary">${esc(q.noMilitary)}</button></div></div>` : "";
       return `<div class="privacy">${ico("lock")}${esc(t().privacy)}</div>
         <div class="q">${esc(q.age)}</div>
-        <div class="row"><input class="field" id="age" inputmode="numeric" placeholder="${esc(q.agePh)}" value="${p.age ?? ""}">
-          <button type="button" class="chip idk${p.age_unknown ? " on" : ""}" id="ageIdk">${esc(t().idk)}</button></div>
+        <input class="field" id="age" inputmode="numeric" placeholder="${esc(q.agePh)}" value="${p.age ?? ""}">
         ${military}
         <div class="q">${esc(q.region)}</div>
         ${chips("region", Object.fromEntries(REGIONS.map((r) => [r, r])), { grid: true })}
@@ -137,7 +136,7 @@
   function readStepInputs() {
     if ((state.params.step || 1) !== 1) return;
     const age = readNumber("age");
-    if (age !== undefined) { state.profile.age = age; if (age !== null) delete state.profile.age_unknown; }
+    if (age !== undefined) { state.profile.age = age; delete state.profile.age_unknown; }
     const military = readNumber("military");
     if (military !== undefined && military !== null) state.profile.military_months = military;
     const sgg = document.getElementById("sigungu");
@@ -314,9 +313,8 @@
       const { field, value } = chip.dataset;
       readStepInputs();
       if (chip.dataset.multi === "true") {
-        let cur = (state.profile[field] || []).filter((v) => v !== "unknown");
-        if (value === "unknown") cur = (state.profile[field] || []).includes("unknown") ? [] : ["unknown"];
-        else cur = cur.includes(value) ? cur.filter((v) => v !== value) : [...cur, value];
+        const cur0 = (state.profile[field] || []).filter((v) => v !== "unknown");   // 예전에 저장된 "잘 모르겠어요"는 버림
+        const cur = cur0.includes(value) ? cur0.filter((v) => v !== value) : [...cur0, value];
         state.profile[field] = cur;
       } else {
         state.profile[field] = state.profile[field] === value ? undefined : value;
@@ -325,7 +323,6 @@
       save();
       return screenQuestion();
     }
-    if (e.target.id === "ageIdk") { state.profile.age = null; state.profile.age_unknown = true; delete state.profile.military_months; save(); return screenQuestion(); }
     if (e.target.id === "noMilitary") { readStepInputs(); state.profile.military_months = 0; save(); return screenQuestion(); }
     const nav = e.target.closest("[data-go]");
     if (nav) {
