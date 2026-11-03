@@ -157,7 +157,8 @@
     const tags = [[p.region, p.sigungu].filter(Boolean).join(" "), p.age != null ? `${p.age}세` : "",
       ...(p.relations || []).map((v) => o.relations[v]).filter(Boolean)].filter(Boolean);
     const groups = { national: [], linked: [], local: [] };
-    for (const c of state.match.cards) groups[c.group].push(c);
+    const shown = state.match.cards.filter((c) => c.status !== "no");   // 어려워 보여요는 보여 주지 않는다 (결정 0013)
+    for (const c of shown) groups[c.group].push(c);
     const count = (s) => state.match.cards.filter((c) => c.status === s).length;
     const section = (g) => {
       if (!groups[g].length) return "";
@@ -181,7 +182,7 @@
         <span class="desc">${esc(r.moreSub)}</span></span><span class="go">${ico("next")}</span></button>
       <div class="guide">${esc(r.others)}<div class="links"><a href="${LINKS.bokjiro}" target="_blank" rel="noopener">복지로</a>
         <a href="${LINKS.youthCenter}" target="_blank" rel="noopener">온통청년</a><a href="tel:129">보건복지상담센터 129</a></div></div>
-      <p class="foot">${esc(r.foot)}</p>`;
+      <p class="foot">${count("no") ? `${esc(r.hidden)}<br>` : ""}${esc(r.foot)}</p>`;
   }
 
   // ---------------------------------------------------------------- 상세
