@@ -128,24 +128,6 @@
    "checked": "2026-11-01"
   },
   {
-   "id": "B03",
-   "group": "linked",
-   "name": "마을변호사",
-   "summary": "무료 법률 상담",
-   "region": null,
-   "apply_type": "청년미래센터 연계",
-   "target": "누구나 (별도 요건 없음)",
-   "income": "없음",
-   "benefit": "무료 법률 상담 (전화·팩스·이메일, 경우에 따라 방문)",
-   "how": "읍·면·동 행정복지센터에서 마을변호사 연락처 확인 후 상담",
-   "period": "상시",
-   "contact": "읍·면·동 행정복지센터",
-   "source": "https://www.bokjiro.go.kr/ssis-tbu/twataa/wlfareInfo/moveTWAT52011M.do?wlfareInfoId=WLF00006295",
-   "notice": null,
-   "closed": false,
-   "checked": "2026-11-01"
-  },
-  {
    "id": "B04",
    "group": "linked",
    "name": "청년도전지원사업",

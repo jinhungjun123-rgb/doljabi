@@ -5,7 +5,7 @@ from ragbot.domain.programs import REGIONS, center_for, load_programs
 def test_programs_file_matches_review():
     d = load_programs()
     ids = [p["id"] for p in d["programs"]]
-    assert ids == ["A01", "A02", "A03", "A04", "A05", "A06", "B01", "B03", "B04", "B05", "C01", "C04", "C05", "C07"]
+    assert ids == ["A01", "A02", "A03", "A04", "A05", "A06", "B01", "B04", "B05", "C01", "C04", "C05", "C07"]
     a01 = next(p for p in d["programs"] if p["id"] == "A01")
     assert "1회" in a01["benefit"] and "200만원" in a01["benefit"] and a01["group"] == "national"
     c05 = next(p for p in d["programs"] if p["id"] == "C05")

@@ -177,6 +177,7 @@
       <h1>${esc(count("ok") ? r.titleN(count("ok")) : r.title)}</h1>
       ${count("check") ? `<p class="sub">${esc(r.lead(count("check")))}</p>` : ""}
       ${centerBlock(state.match.center)}
+      ${shown.length ? "" : `<p class="sub">${esc(r.none)}</p>`}
       ${section("national")}${section("linked")}${section("local")}
       <button type="button" class="card more" data-go="more"><span class="main"><span class="name">${esc(r.more)}</span>
         <span class="desc">${esc(r.moreSub)}</span></span><span class="go">${ico("next")}</span></button>

@@ -40,7 +40,7 @@ def events(body: str) -> list[tuple[str, dict]]:
 
 def test_match_and_programs():
     c = TestClient(create_app(bot_factory=FakeBot))
-    assert len(c.get("/api/programs").json()["programs"]) == 14
+    assert len(c.get("/api/programs").json()["programs"]) == 13
     r = c.post("/api/match", json={"profile": {"age": 20, "region": "충북"}}).json()
     assert r["center"]["phone"] == "1551-1259" and r["cards"]
 

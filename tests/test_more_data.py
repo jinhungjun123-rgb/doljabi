@@ -16,7 +16,7 @@ def test_more_file_shape():
     assert 1500 < sum(i["source"] == "youth" for i in d["items"]) < 2500
     assert 100 < sum(i["source"] == "national" for i in d["items"]) < 200
     assert all(i["link"].startswith("https://") and i["group"] in GROUPS for i in d["items"])
-    assert REVIEWED_IDS.isdisjoint(ids)          # 검수 14개와 겹치지 않음
+    assert REVIEWED_IDS.isdisjoint(ids)          # 검수 후보(마을변호사 포함)와 겹치지 않음
     assert not any(i["source"] == "national" and i["targets"] and set(i["targets"]) <= {"보훈대상자", "다문화·탈북민"}
                    for i in d["items"])
 

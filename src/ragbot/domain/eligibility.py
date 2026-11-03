@@ -120,7 +120,6 @@ RULES = {
         _cond("기초생활 수급 가구", "법 제19조②3, 시행규칙 제9조", "ok"), _selected()],
     "B01": lambda p, _: None if p.get("activity") != "college" else [
         _cond("대학생", "한국장학재단", "ok"), _cond("학자금 지원구간 9구간 이하", "한국장학재단", "unknown")],
-    "B03": lambda p, _: None if not _age_in(p, 13, 200) else [],
     "B04": lambda p, _: None if not _age_in(p, 18, 34) else [
         _age(p, 18, 34, "고용24 2026"),
         _activity(p, "6개월 넘게 취업·교육 이력 없음", "고용24 2026", {"rest_6m_plus"}, {"working", "college", "middle_high"})],

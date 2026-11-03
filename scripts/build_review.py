@@ -9,7 +9,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 ROOT = Path(sys.argv[1])
-TODAY = date.today().isoformat()
+TODAY = sys.argv[3] if len(sys.argv) > 3 else date.today().isoformat()   # 다시 만들 때 원래 수집일 (예: 2026-11-01)
 OUT = ROOT / "data" / "programs" / "review"
 OUT.mkdir(parents=True, exist_ok=True)
 BOK = "https://www.bokjiro.go.kr/ssis-tbu/twataa/wlfareInfo/moveTWAT52011M.do?wlfareInfoId="
@@ -327,10 +327,12 @@ DECISIONS = {
  "결정7": "서울은 청년미래센터 전화와 서울복지포털 접수를 둘 다 보여 준다",
  "결정8": "공공임대주택 우선 공급(B02)은 아직 시행 전이라 제외",
  "결정9": "마감된 사업은 '2026년 마감 · 다음 모집 예정' 상태로 보여 준다",
+ "결정10": "마을변호사(B03)는 누구나 받을 수 있어 판정할 것이 없으므로 제외 (2026-11-03)",
 }
-for pid, key in (("B07", "결정2"), ("B08", "결정3"), ("A07", "결정4"), ("C03", "결정5"), ("B02", "결정8")):
+for pid, key in (("B07", "결정2"), ("B08", "결정3"), ("A07", "결정4"), ("C03", "결정5"), ("B02", "결정8"), ("B03", "결정10")):
     prev = REVIEW.get(pid, {})
-    REVIEW[pid] = {"result": "❌ 제외", "memo": "; ".join(filter(None, [prev.get("memo"), f"{D}: {DECISIONS[key]}"])), "check": ""}
+    who = "팀 결정" if key == "결정10" else D        # 결정10 은 날짜가 문구에 있다
+    REVIEW[pid] = {"result": "❌ 제외", "memo": "; ".join(filter(None, [prev.get("memo"), f"{who}: {DECISIONS[key]}"])), "check": ""}
 REVIEW["C05"] = {"result": "✏️ 수정", "memo": f"{D}: {DECISIONS['결정1']}",
                  "set": {"지원 내용": "발굴·사례관리, 돌봄서비스, 민간자원 연계, 자기돌봄비 1회 200만원 이용권(카드) "
                          "(법령 기준. 울산 안내는 '연 200만원'으로 표기 — 지역 안내 표기와 다름)"}, "check": ""}
@@ -410,7 +412,7 @@ for line in [
     "다른 시트: '청년미래센터 목록' (신청처, 꼭 확인), '현황표에만 있음' (2022년 표, 지금 운영하는지 모름 → 확인 안 되면 제외), '제외한 것' (빼도 되는지 훑어보기).",
     "",
     "v3 (2026-11-01): 팀 검수 답변을 반영함. '최종본' 시트 = 검수 결과를 적용한 값 (❌ 제외 행은 빠짐). '검수 기록' 시트 = 처음 수집한 값 + 검수 결과·메모.",
-    "팀 결정 9개 반영 (JSON 'decisions'). 남은 '⚠ 확인할 점'은 앱에서 '청년미래센터·129에 문의'로 안내하는 항목.",
+    "팀 결정 10개 반영 (JSON 'decisions'). 남은 '⚠ 확인할 점'은 앱에서 '청년미래센터·129에 문의'로 안내하는 항목.",
     "",
     "참고: 법령 내용(자기돌봄비 1회 200만원, 요건 4가지 등)은 이미 챗봇 문서(data/docs)에 있는 원문 기준입니다.",
     "     지역 공고와 법령이 다르면 앱은 법령 기준으로 보여 주고 '지역 안내와 다름'을 표시할 예정입니다.",
