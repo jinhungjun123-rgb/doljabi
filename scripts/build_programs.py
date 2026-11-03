@@ -63,13 +63,25 @@ def _notice(pid: str, row: dict) -> str | None:
     return None
 
 
+def _split_apply_links(source: str, how: str) -> tuple[str, str]:
+    """출처의 "… 신청 페이지 <주소>" 항목은 신청할 곳이지 근거가 아니다: 신청 방법 끝으로 옮긴다."""
+    parts = [s.strip() for s in (source or "").split(";") if s.strip()]
+    apply = [s for s in parts if "신청 페이지" in s and re.search(r"https?://", s)]
+    if not apply:
+        return source, how
+    rest = "; ".join(s for s in parts if s not in apply)
+    links = "\n".join(re.sub(r"\s*(https?://)", r": \1", s, count=1) for s in apply)
+    return rest, f"{how}\n{links}" if how else links
+
+
 def program(row: dict) -> dict:
     row = {k: _user_text(v) for k, v in row.items()}
     pid = row["ID"]
+    source, how = _split_apply_links(row["출처"], row["신청 방법·신청처"])
     return {"id": pid, "group": GROUP[pid[0]], "name": row["사업명"], "summary": SUMMARY[pid], "region": REGION.get(pid),
             "apply_type": row["신청 구분"], "target": row["대상 (나이·조건)"], "income": row["소득 기준"],
-            "benefit": row["지원 내용"], "how": row["신청 방법·신청처"], "period": row["신청 기간"], "contact": row["문의"],
-            "source": row["출처"], "notice": _notice(pid, row), "closed": (row["신청 기간"] or "").startswith("2026년 마감"),
+            "benefit": row["지원 내용"], "how": how, "period": row["신청 기간"], "contact": row["문의"],
+            "source": source, "notice": _notice(pid, row), "closed": (row["신청 기간"] or "").startswith("2026년 마감"),
             "checked": row["자료 확인일"]}
 
 

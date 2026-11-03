@@ -26,3 +26,14 @@ def test_centers_cover_all_regions():
     assert center_for("대구", d)["phone"] == "053-248-4113"
     assert center_for("전남", d)["phone"] is None and center_for("경기", d)["status"] == "preparing"
     assert center_for(None, d) is None
+
+
+def test_application_pages_are_in_how_not_source():
+    # 검수 파일이 출처에 적은 "… 신청 페이지 <주소>"는 출처가 아니라 신청 방법 칸의 링크로 보여 준다
+    apply_url = "https://capi.kmaresearch.co.kr/survey/20260266/index_1.asp"
+    progs = {p["id"]: p for p in load_programs()["programs"]}
+    for p in progs.values():
+        assert "신청 페이지" not in (p["source"] or "") and apply_url not in (p["source"] or ""), p["id"]
+    for pid in ("A01", "A02", "C05"):
+        assert apply_url in progs[pid]["how"], pid
+    assert "https://mediahub.seoul.go.kr/archives/2019538" in progs["A01"]["source"]   # 정보 출처는 남김
