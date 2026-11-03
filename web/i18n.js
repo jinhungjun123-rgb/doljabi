@@ -43,7 +43,7 @@ window.I18N = {
     },
     detail: {
       back: "목록", conditions: "조건", target: "대상", income: "소득 기준", benefit: "지원 내용", how: "신청 방법", period: "신청 기간",
-      contact: "문의", source: "출처", checked: "자료 확인일", ask: "이 지원에 대해 물어보기", call129: "보건복지상담센터 129",
+      contact: "문의", source: "참고 자료", checked: "자료 확인일", ask: "이 지원에 대해 물어보기", call129: "보건복지상담센터 129",
       result: { ok: "충족", unknown: "확인 필요", no: "미충족", info: "안내" },
     },
     more: {
