@@ -101,4 +101,19 @@ def test_selection_clause_points_to_the_age_definition():
     chunks = [Chunk(**c) for c in json.loads(Path("index/chunks.json").read_text(encoding="utf-8"))]
     hits = [c for c in chunks if "제13조(지원대상자 선정 등)" in " ".join(c.path)]
     out = search_documents(Context(index=_FakeIndex(hits), cfg=CFG), "q")
-    assert any("법 제2조1호" in o.get("note", "") and "34세 이하" in o["note"] for o in out)
+    assert any("① 나이" in o.get("note", "") and "법 제2조1호" in o["note"] and "34세 이하" in o["note"] for o in out)
+
+
+def test_income_clauses_get_the_median_income_amounts():
+    # 소득 기준 조문만 검색되고 금액 고시가 검색되지 않으면 모델이 금액을 지어냈다 ("2,340만 원")
+    import json
+    import re
+    from pathlib import Path
+    from ragbot.tools import Context
+    from ragbot.tools.core import search_documents
+    from ragbot.schemas import Chunk
+    chunks = [Chunk(**c) for c in json.loads(Path("index/chunks.json").read_text(encoding="utf-8"))]
+    hits = [c for c in chunks if re.search(r"기준\s*중위소득\s*의\s*100분의\s*100", c.text)]
+    assert len(hits) >= 2
+    out = search_documents(Context(index=_FakeIndex(hits), cfg=CFG), "q")
+    assert all("2,564,238" in o.get("note", "") and "본인" in o["note"] and "4,199,292" not in o["note"] for o in out)
